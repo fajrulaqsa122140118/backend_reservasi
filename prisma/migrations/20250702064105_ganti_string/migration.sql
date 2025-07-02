@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "MasterMeja" ALTER COLUMN "NoMeja" SET DATA TYPE TEXT;

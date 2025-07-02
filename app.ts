@@ -2,7 +2,6 @@ import dotenv from 'dotenv'
 dotenv.config()
 import express, { type Express } from 'express'
 import cors from 'cors'
-import bodyParser from 'body-parser'
 import cookieParser from 'cookie-parser'
 import http from 'http'
 import parsingArgs from '@/utilities/ParseArgs'
@@ -34,8 +33,8 @@ const server = http.createServer(app)
 const io = init(server)
 
 app.use(cors({ origin: true, credentials: true }))
-// app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }))
-app.use(bodyParser.json())
+app.use(express.urlencoded({ extended: true }))
+app.use(express.json())
 app.use(cookieParser())
 
 app.use(function (req, res, next) {

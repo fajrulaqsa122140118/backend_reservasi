@@ -82,3 +82,110 @@ model Loger {
   detail    String
   createdAt DateTime @default(now())
 }
+
+model MasterMeja  {
+  id        Int      @id @default(autoincrement())
+  NamaMeja  String
+  Foto     String?
+  Deskripsi String?
+  Harga     String
+  NoMeja    String
+  TipeMeja  String // besar dan kecil 
+  IsActive  Boolean @default(true) // true = aktif, false = tidak aktif
+  Closed      Boolean @default(false) // true = closed, false = open
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  JadwalMeja JadwalMeja[]
+
+  booking Booking[]
+
+  JamBooking JamBooking[]
+}
+
+model JadwalMeja {
+  id       Int      @id @default(autoincrement())
+  mejaId  Int
+  meja     MasterMeja @relation(fields: [mejaId], references: [id])
+  StartTime String // "08:00"
+  EndTime   String // "08:00"
+  Status    String // "available", "booked", "unavailable"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+
+  JamBooking JamBooking[]
+}
+
+model Booking {
+  id        Int      @id @default(autoincrement())
+  mejaId    Int
+  meja      MasterMeja @relation(fields: [mejaId], references: [id])
+  Tanggal DateTime
+  Harga String
+  KodeBooking String @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  JamBooking JamBooking[]
+
+  BiodataBooking BiodataBooking[]
+
+  BuktiPembayaran BuktiPembayaran[]
+}
+
+model JamBooking {
+  id        Int      @id @default(autoincrement())
+  BookingId Int
+  Booking   Booking  @relation(fields: [BookingId], references: [id])
+  idMeja Int
+  MasterMeja MasterMeja @relation(fields: [idMeja], references: [id])
+  idJadwalMeja Int
+  JadwalMeja  JadwalMeja @relation(fields: [idJadwalMeja], references: [id])  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+}
+
+model BiodataBooking{
+  id        Int      @id @default(autoincrement())
+  BookingId Int
+  Booking   Booking  @relation(fields: [BookingId], references: [id])
+  Nama      String
+  NoTelp    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+}
+
+model BuktiPembayaran {
+  id        Int      @id @default(autoincrement())
+  KodeBookingID String?
+  Booking   Booking?  @relation(fields: [KodeBookingID], references: [KodeBooking])
+  Foto      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+}
+
+model Banner {
+  id        Int      @id @default(autoincrement())
+  Foto      String
+  Judul     String
+  IsActive  Boolean @default(true) // true = aktif, false = tidak aktif
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+}
+model Closed {
+  id        Int      @id @default(autoincrement())
+  startdate DateTime
+  enddate   DateTime
+  Deskripsi String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+}

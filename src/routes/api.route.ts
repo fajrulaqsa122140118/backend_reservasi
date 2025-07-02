@@ -10,6 +10,8 @@ import { StatusCodes } from 'http-status-codes'
 import { AuthRoute } from './auth/AuthRoute'
 import { UserRouter } from './master/UserRoute'
 import TestController from '@/controllers/master/TestController'
+import { MasterMejaRouter } from './master/MasterMejaRoute'
+import { JadwalMejaRouter } from './master/JadwalMejaRoute'
 
 
 const fileUpload = fileUploadMiddleware.fileUploadHandler('uploads', {
@@ -33,7 +35,13 @@ export const appRouter = async function (app: Express): Promise<void> {
 
   // master route
   app.use(CONFIG.apiUrl + 'master/user', UserRouter())
+  app.use(CONFIG.apiUrl + 'master/meja', MasterMejaRouter())
 
   app.post(CONFIG.apiUrl + 'test-up-file', fileUpload.single('images'), TestController.testFileUploadToS3)
   app.post(CONFIG.apiUrl + 'test-up-delete', fileUpload.single('images'), TestController.deleteFileFromS3)
+
+  // jadwal meja route
+  app.use(CONFIG.apiUrl + 'master/jadwal-meja', JadwalMejaRouter())
+  
+
 }

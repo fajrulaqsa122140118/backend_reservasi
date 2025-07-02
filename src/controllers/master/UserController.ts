@@ -17,7 +17,7 @@ const UserController = {
         parseInt(req.query.page as string),
         parseInt(req.query.limit as string),
       )
-
+    
       const userLogin = req.user
 
       console.log(userLogin?.role)
