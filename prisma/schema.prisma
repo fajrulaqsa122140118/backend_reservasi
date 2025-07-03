@@ -156,6 +156,7 @@ model BiodataBooking{
   Booking   Booking  @relation(fields: [BookingId], references: [id])
   Nama      String
   NoTelp    String
+  Alamat    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime?

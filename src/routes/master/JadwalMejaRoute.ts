@@ -9,7 +9,7 @@ export const JadwalMejaRouter = (): Router => {
 
   router.get('/', JadwalMejaController.getAllJadwalMeja)
   router.post('/create', JadwalMejaController.createJadwalMeja) 
-  //router.delete('/delete/:id', JadwalMejaController.deleteJadwalMeja)
+  router.delete('/delete/:id', JadwalMejaController.deleteJadwalMeja)
   router.put('/update/:id', JadwalMejaController.updateJadwalMeja)
   return router
 }

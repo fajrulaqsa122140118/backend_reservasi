@@ -131,7 +131,6 @@ const AuthController = {
       return serverErrorResponse(res, error)
     }
   },
-  
   logout : async (req: Request, res: Response) => {
     const userLogin = req.user as jwtPayloadInterface
 
@@ -152,8 +151,6 @@ const AuthController = {
       return serverErrorResponse(res, error)
     }
   },
-
 }
-
 
 export default AuthController

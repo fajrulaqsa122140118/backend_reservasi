@@ -12,6 +12,8 @@ import { UserRouter } from './master/UserRoute'
 import TestController from '@/controllers/master/TestController'
 import { MasterMejaRouter } from './master/MasterMejaRoute'
 import { JadwalMejaRouter } from './master/JadwalMejaRoute'
+import BookingRouter from './master/BookingRoute'
+import { BiodataBookingRouter } from './master/BiodataBookingRoute'
 
 
 const fileUpload = fileUploadMiddleware.fileUploadHandler('uploads', {
@@ -42,6 +44,11 @@ export const appRouter = async function (app: Express): Promise<void> {
 
   // jadwal meja route
   app.use(CONFIG.apiUrl + 'master/jadwal-meja', JadwalMejaRouter())
-  
+
+  // booking route
+  app.use(CONFIG.apiUrl + 'master/booking', BookingRouter)
+
+  // Biodata route
+  app.use(CONFIG.apiUrl + 'master/biodata', BiodataBookingRouter())
 
 }

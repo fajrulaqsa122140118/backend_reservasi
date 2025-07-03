@@ -3,13 +3,7 @@ import { Request, Response } from 'express'
 import { Pagination } from '@/utilities/Pagination'
 import prisma from '@/config/database'
 import { ResponseData, serverErrorResponse } from '@/utilities'
-import { jwtPayloadInterface } from '@/utilities/JwtHanldler'
-import { validateInput } from '@/utilities/ValidateHandler'
-import { UserSchemaForCreate, UserSchemaForUpdate } from '@/Schema/UserSchema'
-import { hashPassword } from '@/utilities/PasswordHandler'
-import { getIO } from '@/config/socket'
-import { logActivity } from '@/utilities/LogActivity'
-import { create } from 'domain'
+
 
 const JadwalMejaController = {
   getAllJadwalMeja: async (req: Request, res: Response): Promise<any> => {
@@ -63,7 +57,7 @@ const JadwalMejaController = {
       }
 
       // Cek apakah MasterMeja dengan id itu ada
-      const meja = await prisma.masterMeja.findUnique({
+      const meja = await prisma.masterMeja.findFirst({
         where: { id: Number(mejaId) },
       })
 
@@ -74,19 +68,19 @@ const JadwalMejaController = {
       }
 
       //   // Simpan ke database
-      //   const jadwal = await prisma.jadwalMeja.create({
-      //     // data: {
-      //     //   mejaId: Number(mejaId),
-      //     //   StartTime: new Date(StartTime),
-      //     //   EndTime: new Date(EndTime), 
-      //     //   Status,
-      //     // },
-      //   })
+      const jadwal = await prisma.jadwalMeja.create({
+        data: {
+          mejaId: Number(mejaId),
+          StartTime: StartTime,
+          EndTime: EndTime,
+          Status,
+        },
+      })
 
-    //   return res.status(StatusCodes.CREATED).json({
-    //     message: 'JadwalMeja berhasil dibuat',
-    //     data: jadwal,
-    //   })
+      return res.status(StatusCodes.CREATED).json({
+        message: 'JadwalMeja berhasil dibuat',
+        data: jadwal,
+      })
     } catch (error: any) {
       console.error(error)
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
@@ -99,8 +93,6 @@ const JadwalMejaController = {
     try {
       const jadwalId = parseInt(req.params.id as string)
       const { mejaId, StartTime, EndTime, Status } = req.body
-      const StartTimefix = new Date(StartTime)
-      const EndTimefix = new Date(EndTime)
       // Validasi sederhana
       if (!mejaId || !StartTime || !EndTime || !Status) {
         return res.status(StatusCodes.BAD_REQUEST).json({
@@ -109,13 +101,24 @@ const JadwalMejaController = {
       }
 
       // Cek apakah JadwalMeja dengan id itu ada
-      const jadwal = await prisma.jadwalMeja.findUnique({
+      const jadwal = await prisma.jadwalMeja.findFirst({
         where: { id: jadwalId },
       })
 
       if (!jadwal) {
         return res.status(StatusCodes.NOT_FOUND).json({
           message: `JadwalMeja dengan id ${jadwalId} tidak ditemukan`,
+        })
+      }
+
+      // Cek apakah MasterMeja dengan id itu ada
+      const meja = await prisma.masterMeja.findFirst({
+        where: { id: Number(mejaId) },
+      })
+
+      if (!meja) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          message: `Meja dengan id ${mejaId} tidak ditemukan`,
         })
       }
 
@@ -138,6 +141,37 @@ const JadwalMejaController = {
       console.error(error)
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         message: 'Gagal memperbarui JadwalMeja',
+        error: error.message,
+      })
+    }
+  },
+  deleteJadwalMeja: async (req: Request, res: Response): Promise<any> => {
+    try {
+      const jadwalId = parseInt(req.params.id as string)
+
+      // Cek apakah JadwalMeja dengan id itu ada
+      const jadwal = await prisma.jadwalMeja.findFirst({
+        where: { id: jadwalId },
+      })
+
+      if (!jadwal) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          message: `JadwalMeja dengan id ${jadwalId} tidak ditemukan`,
+        })
+      }
+
+      // Hapus JadwalMeja
+      await prisma.jadwalMeja.delete({
+        where: { id: jadwalId },
+      })
+
+      return res.status(StatusCodes.OK).json({
+        message: 'JadwalMeja berhasil dihapus',
+      })
+    } catch (error: any) {
+      console.error(error)
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: 'Gagal menghapus JadwalMeja',
         error: error.message,
       })
     }

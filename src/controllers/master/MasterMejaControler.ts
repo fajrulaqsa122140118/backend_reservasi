@@ -4,12 +4,9 @@ import { Pagination } from '@/utilities/Pagination'
 import prisma from '@/config/database'
 import { ResponseData, serverErrorResponse } from '@/utilities'
 import { jwtPayloadInterface } from '@/utilities/JwtHanldler'
-import { validateInput } from '@/utilities/ValidateHandler'
-import { UserSchemaForCreate, UserSchemaForUpdate } from '@/Schema/UserSchema'
-import { hashPassword } from '@/utilities/PasswordHandler'
 import { getIO } from '@/config/socket'
 import { logActivity } from '@/utilities/LogActivity'
-import { create } from 'domain'
+
 
 
 const MasterMejaController = {
@@ -159,7 +156,77 @@ const MasterMejaController = {
     } catch (error: any) {
       return serverErrorResponse(res, error)
     }
-  },    
+  },
+  softDeleteMeja: async (req: Request, res: Response): Promise<any> => {
+    try {
+      const userLogin = req.user as jwtPayloadInterface
+      const mejaId = parseInt(req.params.id as string)
+
+      const mejaData = await prisma.masterMeja.findUnique({
+        where: { id: mejaId },
+      })
+
+      if (!mejaData) {
+        return res
+          .status(StatusCodes.NOT_FOUND)
+          .json(ResponseData(StatusCodes.NOT_FOUND, 'Meja not found'))
+      }
+
+      await prisma.masterMeja.update({
+        where: { id: mejaId },
+        data: { deletedAt: new Date() },
+      })
+
+      getIO().emit('mejaSoftDeleted', mejaId)
+
+      logActivity(
+        userLogin.id,
+        'DELETE',
+        `Soft deleted meja with ID ${mejaId}`,
+      )
+
+      return res.status(StatusCodes.OK).json(
+        ResponseData(StatusCodes.OK, 'Meja soft deleted successfully'),
+      )
+    } catch (error: any) {
+      return serverErrorResponse(res, error)
+    }
+  },
+  restoreMeja: async (req: Request, res: Response): Promise<any> => {
+    try {
+      const userLogin = req.user as jwtPayloadInterface
+      const mejaId = parseInt(req.params.id as string)
+
+      const mejaData = await prisma.masterMeja.findUnique({
+        where: { id: mejaId },
+      })
+
+      if (!mejaData) {
+        return res
+          .status(StatusCodes.NOT_FOUND)
+          .json(ResponseData(StatusCodes.NOT_FOUND, 'Meja not found'))
+      }
+
+      await prisma.masterMeja.update({
+        where: { id: mejaId },
+        data: { deletedAt: null },
+      })
+
+      getIO().emit('mejaRestored', mejaId)
+
+      logActivity(
+        userLogin.id,
+        'RESTORE',
+        `Restored meja with ID ${mejaId}`,
+      )
+
+      return res.status(StatusCodes.OK).json(
+        ResponseData(StatusCodes.OK, 'Meja restored successfully'),
+      )
+    } catch (error: any) {
+      return serverErrorResponse(res, error)
+    }
+  },
 } 
 
 export default MasterMejaController
