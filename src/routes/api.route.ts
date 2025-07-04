@@ -14,6 +14,7 @@ import { MasterMejaRouter } from './master/MasterMejaRoute'
 import { JadwalMejaRouter } from './master/JadwalMejaRoute'
 import BookingRouter from './master/BookingRoute'
 import { BiodataBookingRouter } from './master/BiodataBookingRoute'
+import { BannerRouter } from './master/BannerRoute'
 
 
 const fileUpload = fileUploadMiddleware.fileUploadHandler('uploads', {
@@ -51,4 +52,7 @@ export const appRouter = async function (app: Express): Promise<void> {
   // Biodata route
   app.use(CONFIG.apiUrl + 'master/biodata', BiodataBookingRouter())
 
+  // Banner route
+  app.use(CONFIG.apiUrl + 'master/banner', BannerRouter())
+  
 }

@@ -176,6 +176,33 @@ const JadwalMejaController = {
       })
     }
   },
+  getJadwalMejaById: async (req: Request, res: Response): Promise<any> => {
+    try {
+      const jadwalId = parseInt(req.params.id as string)
+
+      // Cek apakah JadwalMeja dengan id itu ada
+      const jadwal = await prisma.jadwalMeja.findFirst({
+        where: { id: jadwalId },
+      })
+
+      if (!jadwal) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          message: `JadwalMeja dengan id ${jadwalId} tidak ditemukan`,
+        })
+      }
+
+      return res.status(StatusCodes.OK).json({
+        message: 'JadwalMeja ditemukan',
+        data: jadwal,
+      })
+    } catch (error: any) {
+      console.error(error)
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: 'Gagal mendapatkan JadwalMeja',
+        error: error.message,
+      })
+    }
+  },
 }
 
 export default JadwalMejaController

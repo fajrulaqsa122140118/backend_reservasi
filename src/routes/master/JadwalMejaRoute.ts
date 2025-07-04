@@ -11,5 +11,6 @@ export const JadwalMejaRouter = (): Router => {
   router.post('/create', JadwalMejaController.createJadwalMeja) 
   router.delete('/delete/:id', JadwalMejaController.deleteJadwalMeja)
   router.put('/update/:id', JadwalMejaController.updateJadwalMeja)
+  router.get('/:id', JadwalMejaController.getJadwalMejaById)
   return router
 }
