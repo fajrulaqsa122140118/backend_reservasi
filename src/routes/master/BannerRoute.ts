@@ -12,8 +12,8 @@ export const BannerRouter = (): Router => {
 
   router.get('/', BannerController.getAllBanners)
   router.post('/create', upload.single('banner'), BannerController.createBanner)
-  //   router.get('/:id', BannerController.getBannerById)
-  //   router.delete('/:id/soft', BannerController.softdeleteBanner)
-  //   router.patch('/:id/restore', BannerController.restoreBanner)
+  router.put('/update/:id', upload.single('banner'), BannerController.updateBanner)
+  router.get('/:id', BannerController.getBannerById)
+  router.delete('/:id', BannerController.deleteBanner)
   return router
 }

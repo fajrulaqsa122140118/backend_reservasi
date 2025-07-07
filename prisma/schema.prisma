@@ -175,6 +175,7 @@ model BuktiPembayaran {
 model Banner {
   id        Int      @id @default(autoincrement())
   Foto      String
+  NamaFoto  String?
   Judul     String
   IsActive  Boolean @default(true) // true = aktif, false = tidak aktif
   createdAt DateTime @default(now())
@@ -190,3 +191,4 @@ model Closed {
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
 }
+
