@@ -103,7 +103,7 @@ async function uploadToS3(file: FileType, folder: string): Promise<string> {
   const newFileName = generateFileName(file.originalname)
   const result = await uploadFileToS3WithOutRedis({ ...file, originalname: newFileName }, folder)
   if (!result) throw new Error('Upload ke S3 gagal')
-  return result
+  return result.url
 }
 
 /**
