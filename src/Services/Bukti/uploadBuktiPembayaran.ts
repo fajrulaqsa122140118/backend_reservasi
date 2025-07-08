@@ -1,0 +1,19 @@
+import { supabase } from '@/config/supabase'
+
+export async function uploadToSupabase(file: Express.Multer.File): Promise<string | null> {
+  const fileExt = file.originalname.split('.').pop()
+  const fileName = `uploads_${Date.now()}.${fileExt}`
+  
+  const { error } = await supabase.storage
+    .from('uploads') // nama bucket di supabase
+    .upload(fileName, file.buffer, {
+      contentType: file.mimetype,
+      upsert: true,
+    })
+  console.log('File yang diunggah:', error)
+
+  if (error) return null
+
+  const { data } = supabase.storage.from('uploads').getPublicUrl(fileName)
+  return data?.publicUrl ?? null
+}

@@ -4,10 +4,7 @@ import { Pagination } from '@/utilities/Pagination'
 import prisma from '@/config/database'
 import { ResponseData, serverErrorResponse } from '@/utilities'
 import { deleteFileFromSupabase, FileType, uploadFileToSupabase } from '@/utilities/AwsHandler'
-import { supabase, supabaseStorageBucket } from '@/config/supabase'
-import { get } from 'http'
-
-
+import { supabase } from '@/config/supabase'
 
 const BannerController = {
   getAllBanners: async (req: Request, res: Response): Promise<any> => {
@@ -230,8 +227,7 @@ const BannerController = {
       return serverErrorResponse(res, error)
     }
   },
-
-
+  
 }
 
 export default BannerController

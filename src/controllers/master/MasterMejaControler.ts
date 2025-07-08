@@ -6,8 +6,7 @@ import { ResponseData, serverErrorResponse } from '@/utilities'
 import { jwtPayloadInterface } from '@/utilities/JwtHanldler'
 import { getIO } from '@/config/socket'
 import { logActivity } from '@/utilities/LogActivity'
-
-
+import { FileType, uploadFileToSupabase } from '@/utilities/AwsHandler'
 
 const MasterMejaController = {
   getAllMeja: async (req: Request, res: Response): Promise<any> => {
@@ -50,14 +49,47 @@ const MasterMejaController = {
   createMeja: async (req: Request, res: Response): Promise<any> => {
     try {
       const userLogin = req.user as jwtPayloadInterface
-      const reqBody = req.body as any
+      const reqBody = req.body
+      const file = req.file
 
-      console.log(reqBody)
-       
+      // Validasi input
+      if (!reqBody.nama || !reqBody.harga || !reqBody.noMeja || !reqBody.TipeMeja || !file) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: 'Field nama, harga, noMeja, tipeMeja, dan foto wajib diisi',
+        })
+      }
+      // Cek apakah NamaMeja sudah ada
+      const existingMeja = await prisma.masterMeja.findFirst({
+        where: {
+          NamaMeja: reqBody.nama,
+        },
+      })
+
+      if (existingMeja) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: `Nama meja "${reqBody.nama}" sudah digunakan`,
+        })
+      }
+      // Upload ke Supabase
+      const fileUpload: FileType = {
+        mimetype: file.mimetype,
+        buffer: file.buffer,
+        originalname: file.originalname,
+      }
+
+      const imageUrl = await uploadFileToSupabase(fileUpload, 'meja') // folder 'meja' di Supabase
+
+      if (!imageUrl) {
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+          message: 'Gagal mengunggah gambar ke Supabase',
+        })
+      }
+
+      // Simpan ke database
       const newMeja = await prisma.masterMeja.create({
         data: {
           NamaMeja: reqBody.nama,
-          Foto: reqBody.foto,
+          Foto: imageUrl.url, // URL file dari Supabase
           Deskripsi: reqBody.deskripsi,
           Harga: reqBody.harga,
           NoMeja: reqBody.noMeja,
@@ -67,17 +99,15 @@ const MasterMejaController = {
 
       getIO().emit('mejaCreated', newMeja)
 
-      logActivity(
-        userLogin.id,
-        'CREATE',
-        `Created new meja with ID ${newMeja.id}`,
-      )
+      logActivity(userLogin.id, 'CREATE', `Created new meja with ID ${newMeja.id}`)
 
       return res.status(StatusCodes.CREATED).json(
-        ResponseData(StatusCodes.CREATED, 'Meja created successfully', newMeja),
+        ResponseData(StatusCodes.CREATED, 'Meja berhasil dibuat', newMeja),
       )
     } catch (error: any) {
-      return serverErrorResponse(res, error)
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(
+        ResponseData(StatusCodes.INTERNAL_SERVER_ERROR, 'Gagal membuat meja', error.message),
+      )
     }
   },
   deleteMeja: async (req: Request, res: Response): Promise<any> => {

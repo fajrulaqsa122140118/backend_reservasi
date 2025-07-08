@@ -15,6 +15,7 @@ import { JadwalMejaRouter } from './master/JadwalMejaRoute'
 import BookingRouter from './master/BookingRoute'
 import { BiodataBookingRouter } from './master/BiodataBookingRoute'
 import { BannerRouter } from './master/BannerRoute'
+import { BuktiPembayaranRouter } from './master/BuktiPembayaranRoute'
 
 
 const fileUpload = fileUploadMiddleware.fileUploadHandler('uploads', {
@@ -39,6 +40,7 @@ export const appRouter = async function (app: Express): Promise<void> {
   // master route
   app.use(CONFIG.apiUrl + 'master/user', UserRouter())
   app.use(CONFIG.apiUrl + 'master/meja', MasterMejaRouter())
+  
 
   app.post(CONFIG.apiUrl + 'test-up-file', fileUpload.single('images'), TestController.testFileUploadToS3)
   app.post(CONFIG.apiUrl + 'test-up-delete', fileUpload.single('images'), TestController.deleteFileFromS3)
@@ -54,5 +56,7 @@ export const appRouter = async function (app: Express): Promise<void> {
 
   // Banner route
   app.use(CONFIG.apiUrl + 'master/banner', BannerRouter())
-  
+
+  // Bukti route
+  app.use(CONFIG.apiUrl + 'master/bukti', BuktiPembayaranRouter())
 }

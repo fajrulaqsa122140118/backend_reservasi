@@ -4,17 +4,6 @@ import { Pagination } from '@/utilities/Pagination'
 import prisma from '@/config/database'
 import { ResponseData, serverErrorResponse } from '@/utilities'
 
-// Fungsi untuk menghasilkan kode booking
-// Format: BK-YYYYMMDD-RRRR (contoh: BK-20250703-ABCD)
-// Di mana YYYYMMDD adalah tanggal dalam format tahun-bulan-tanggal tanpa tanda hubung
-// RRRR adalah 4 karakter acak yang dihasilkan dari kombinasi huruf dan angka
-// Contoh: BK-20250703-ABCD
-// Fungsi ini menerima tanggal dalam format YYYY-MM-DD dan mengembalikan kode booking yang sesuai
-// Contoh penggunaan: generateKodeBooking('2025-07-03') akan menghasilkan 'BK-20250703-ABCD'
-// ABCD adalah 4 karakter acak yang dihasilkan dari kombinasi huruf dan angka
-// Pastikan tanggal yang diberikan valid dan sesuai dengan format yang diharapkan
-
-
 function generateKodeBooking(tanggal: string): string {
   const formatTanggal = tanggal.replace(/-/g, '') // 2025-07-03 → 20250703
   const random = Math.random().toString(36).substring(2, 6).toUpperCase() // 4 karakter acak
@@ -48,6 +37,13 @@ const BookingController = {
                     JadwalMeja: true,
                   },
                 },
+              },
+            },
+            BuktiPembayaran: {
+              select: {
+                id: true,
+                Foto: true,
+                createdAt: true,
               },
             },
           },

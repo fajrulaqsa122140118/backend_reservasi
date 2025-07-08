@@ -1,4 +1,4 @@
-import BookingController from '@/controllers/master/BookingBookingController'
+import BookingController from '@/controllers/master/BookingController'
 import { AuthMiddleware } from '@/middleware/AuthMiddleware'
 import { Router } from 'express'
 

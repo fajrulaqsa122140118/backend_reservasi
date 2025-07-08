@@ -85,7 +85,7 @@ model Loger {
 
 model MasterMeja  {
   id        Int      @id @default(autoincrement())
-  NamaMeja  String
+  NamaMeja  String @unique
   Foto     String?
   Deskripsi String?
   Harga     String
