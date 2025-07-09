@@ -8,9 +8,7 @@ export const ClosedRouter = (): Router => {
   router.use(AuthMiddleware)
 
   router.post('/close', ClosedController.createClosedStore)
-  router.post('/open', ClosedController.createOpenException)
   router.get('/', ClosedController.getAllClosedStores)
-  router.delete('/soft-delete/:id', ClosedController.softdeleteClosedStore)
   router.get('/:id', ClosedController.getClosedStoreById)
 
   return router

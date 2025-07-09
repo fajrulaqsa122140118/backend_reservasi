@@ -19,9 +19,6 @@ const ClosedController = {
       const [closedData, count] = await Promise.all([
         prisma.closed.findMany({
           where: whereCondition,
-          include: {
-            OpenException: true,
-          },
           skip: page.offset,
           take: page.limit,
           orderBy: { id: 'desc' },
@@ -75,75 +72,11 @@ const ClosedController = {
       return serverErrorResponse(res, error)
     }
   },
-  createOpenException: async (req: Request, res: Response): Promise<any> => {
-    try {
-      const { closedId, startTime, endTime, keterangan } = req.body
-
-      if (!closedId || !startTime || !endTime || !keterangan) {
-        return res.status(400).json({ message: 'Semua field wajib diisi' })
-      }
-
-      // Validasi closedId ada
-      const closed = await prisma.closed.findUnique({ where: { id: closedId } })
-      if (!closed) return res.status(404).json({ message: 'Jadwal tutup tidak ditemukan' })
-
-      // Validasi apakah pengecualian di dalam rentang tutup
-      const start = new Date(startTime)
-      const end = new Date(endTime)
-      if (start < closed.startdate || end > closed.enddate) {
-        return res.status(400).json({
-          message: 'Pengecualian waktu buka harus berada di dalam periode tutup',
-        })
-      }
-
-      const exception = await prisma.openException.create({
-        data: {
-          closedId,
-          startTime: start,
-          endTime: end,
-          Keterangan: keterangan,
-        },
-      })
-
-      return res.status(201).json(
-        ResponseData(201, 'Pengecualian buka berhasil ditambahkan', exception),
-      )
-    } catch (error: any) {
-      return serverErrorResponse(res, error)
-    }
-  },
-  softdeleteClosedStore: async (req: Request, res: Response): Promise<any> => {
-    try {
-      const { id } = req.params
-      const closed = await prisma.closed.findUnique({
-        where: { id: Number(id) },
-      })
-      if (!closed) {
-        return res.status(StatusCodes.NOT_FOUND).json({
-          message: 'Toko tidak ditemukan',
-        })
-      }
-        
-      await prisma.closed.update({
-        where: { id: Number(id) },
-        data: { deletedAt: new Date() },
-      })
-        
-      return res.status(StatusCodes.OK).json(
-        ResponseData(StatusCodes.OK, 'Toko berhasil dihapus', closed),
-      )
-    } catch (error: any) {
-      return serverErrorResponse(res, error)
-    }
-  },
   getClosedStoreById: async (req: Request, res: Response): Promise<any> => {
     try {
       const { id } = req.params
       const closed = await prisma.closed.findUnique({
         where: { id: Number(id) },
-        include: {
-          OpenException: true,
-        },
       })
       if (!closed) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -158,7 +91,5 @@ const ClosedController = {
     }
   },
 }
-
-
 
 export default ClosedController

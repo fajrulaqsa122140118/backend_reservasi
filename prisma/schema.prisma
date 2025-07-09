@@ -191,17 +191,13 @@ model Closed {
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
 
-  OpenException OpenException[]
 }
-model OpenException {
+model syaratketentuan {
   id        Int      @id @default(autoincrement())
-  closedId  Int
-  startTime DateTime
-  endTime   DateTime
-  Keterangan String
+  syarat    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  Closed    Closed   @relation(fields: [closedId], references: [id])
+  deletedAt DateTime?
 }
+
 
