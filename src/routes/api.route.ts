@@ -16,7 +16,7 @@ import BookingRouter from './master/BookingRoute'
 import { BiodataBookingRouter } from './master/BiodataBookingRoute'
 import { BannerRouter } from './master/BannerRoute'
 import { BuktiPembayaranRouter } from './master/BuktiPembayaranRoute'
-
+import { ClosedRouter } from './master/ClosedRoute'
 
 const fileUpload = fileUploadMiddleware.fileUploadHandler('uploads', {
   maxFileSize: CONFIG.maxFileSize as number,
@@ -59,4 +59,7 @@ export const appRouter = async function (app: Express): Promise<void> {
 
   // Bukti route
   app.use(CONFIG.apiUrl + 'master/bukti', BuktiPembayaranRouter())
+
+  // Closed route
+  app.use(CONFIG.apiUrl + 'master/closed', ClosedRouter())
 }

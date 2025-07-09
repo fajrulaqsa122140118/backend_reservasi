@@ -15,5 +15,7 @@ export const MasterMejaRouter = (): Router => {
   router.put('/update/:id', MasterMejaControler.updateMeja)
   router.delete('/soft-delete/:id', MasterMejaControler.softDeleteMeja)
   router.patch('/restore/:id', MasterMejaControler.restoreMeja)
+  router.get('/:id', MasterMejaControler.getMejaById)
+  
   return router
 }

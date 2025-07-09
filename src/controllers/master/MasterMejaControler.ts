@@ -8,17 +8,25 @@ import { getIO } from '@/config/socket'
 import { logActivity } from '@/utilities/LogActivity'
 import { FileType, uploadFileToSupabase } from '@/utilities/AwsHandler'
 
+
 const MasterMejaController = {
   getAllMeja: async (req: Request, res: Response): Promise<any> => {
     try {
+      const { tipe } = req.query
       const page = new Pagination(
         parseInt(req.query.page as string),
         parseInt(req.query.limit as string),
       )
-    
-      const whereCondition = {
-        deletedAt: null,
+      
+      const whereCondition = {} as any
+
+      whereCondition.deletedAt = null
+
+      if (tipe) {
+        whereCondition.TipeMeja = tipe
       }
+
+      console.log(whereCondition)
     
       const [mejaData, count] = await Promise.all([
         prisma.masterMeja.findMany({
@@ -28,7 +36,7 @@ const MasterMejaController = {
           take: page.limit,
           orderBy: { id: 'desc' },
         }),
-        prisma.jadwalMeja.count({
+        prisma.masterMeja.count({
           where: whereCondition,
         }),
       ])
@@ -257,7 +265,28 @@ const MasterMejaController = {
       return serverErrorResponse(res, error)
     }
   },
-} 
+  getMejaById: async (req: Request, res: Response): Promise<any> => {
+    try {
+      const mejaId = parseInt(req.params.id as string)
+
+      const mejaData = await prisma.masterMeja.findUnique({
+        where: { id: mejaId },
+      })
+
+      if (!mejaData) {
+        return res
+          .status(StatusCodes.NOT_FOUND)
+          .json(ResponseData(StatusCodes.NOT_FOUND, 'Meja not found'))
+      }
+
+      return res.status(StatusCodes.OK).json(
+        ResponseData(StatusCodes.OK, 'Meja found', mejaData),
+      )
+    } catch (error: any) {
+      return serverErrorResponse(res, error)
+    }
+  },
+}
 
 export default MasterMejaController
 
