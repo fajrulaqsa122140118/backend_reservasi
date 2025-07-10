@@ -7,9 +7,10 @@ export const ClosedRouter = (): Router => {
 
   router.use(AuthMiddleware)
 
-  router.post('/close', ClosedController.createClosedStore)
-  router.get('/', ClosedController.getAllClosedStores)
-  router.get('/:id', ClosedController.getClosedStoreById)
+  router.get('/', ClosedController.getAllClosed)
+  router.post('/create', ClosedController.createOrUpdateClosed)
+  router.get('/:id', ClosedController.getClosedById)
+  router.delete('/delete/:id', ClosedController.deleteClosed)
 
   return router
 }

@@ -1,86 +1,23 @@
 import { StatusCodes } from 'http-status-codes'
 import { Request, Response } from 'express'
-import { Pagination } from '@/utilities/Pagination'
 import prisma from '@/config/database'
 import { ResponseData, serverErrorResponse } from '@/utilities'
-import { create } from 'domain'
-import { get } from 'http'
 
 const SyaratController = {
-  getAllSyarat: async (req: Request, res: Response): Promise<any> => {
-    try {
-      const page = new Pagination(
-        parseInt(req.query.page as string),
-        parseInt(req.query.limit as string),
-      )
-
-      const whereCondition = {
-        deletedAt: null,
-      }
-
-      const [syaratData, count] = await Promise.all([
-        prisma.syaratketentuan.findMany({
-          where: whereCondition,
-          skip: page.offset,
-          take: page.limit,
-          orderBy: { id: 'desc' },
-        }),
-        prisma.syaratketentuan.count({
-          where: whereCondition,
-        }),
-      ])
-
-      return res
-        .status(StatusCodes.OK)
-        .json(
-          ResponseData(
-            StatusCodes.OK,
-            'Success',
-            page.paginate({ count, rows: syaratData }),
-          ),
-        )
-    } catch (error: any) {
-      return serverErrorResponse(res, error)
-    }
-  },
-  createSyarat: async (req: Request, res: Response): Promise<any> => {
-    try {
-      const { syarat } = req.body
-
-      if (!syarat) {
-        return res.status(StatusCodes.BAD_REQUEST).json({
-          message: 'Syarat is required',
-        })
-      }
-
-      const newSyarat = await prisma.syaratketentuan.create({
-        data: {
-          syarat,
-        },
-      })
-
-      return res.status(StatusCodes.CREATED).json(
-        ResponseData(StatusCodes.CREATED, 'Syarat created successfully', newSyarat),
-      )
-    } catch (error: any) {
-      return serverErrorResponse(res, error)
-    }
-  },
+  
   getSyaratById: async (req: Request, res: Response): Promise<any> => {
     try {
-      const { id } = req.params
+
       const syarat = await prisma.syaratketentuan.findUnique({
-        where: { id: Number(id) },
+        where: { id: Number(1) },
       })
 
-      if (!syarat) {
-        return res.status(StatusCodes.NOT_FOUND).json({
-          message: 'Syarat not found',
-        })
+      const datas = {
+        syarat: syarat?.syarat || 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
       }
 
       return res.status(StatusCodes.OK).json(
-        ResponseData(StatusCodes.OK, 'Success', syarat),
+        ResponseData(StatusCodes.OK, 'Success', datas),
       )
     } catch (error: any) {
       return serverErrorResponse(res, error)
@@ -88,18 +25,19 @@ const SyaratController = {
   },
   updateSyarat: async (req: Request, res: Response): Promise<any> => {
     try {
-      const { id } = req.params
+   
       const { syarat } = req.body
 
-      if (!syarat) {
-        return res.status(StatusCodes.BAD_REQUEST).json({
-          message: 'Syarat is required',
-        })
-      }
+      const syaratId =  Number(1)
 
-      const updatedSyarat = await prisma.syaratketentuan.update({
-        where: { id: Number(id) },
-        data: { syarat },
+      const updatedSyarat = await prisma.syaratketentuan.upsert({
+        where: { id: syaratId },
+        create: {
+          syarat: syarat,
+        },
+        update: {
+          syarat: syarat,
+        },
       })
 
       return res.status(StatusCodes.OK).json(
@@ -109,23 +47,6 @@ const SyaratController = {
       return serverErrorResponse(res, error)
     }
   },
-  deleteSyarat: async (req: Request, res: Response): Promise<any> => {
-    try {
-      const { id } = req.params
-
-      const deletedSyarat = await prisma.syaratketentuan.update({
-        where: { id: Number(id) },
-        data: { deletedAt: new Date() },
-      })
-
-      return res.status(StatusCodes.OK).json(
-        ResponseData(StatusCodes.OK, 'Syarat deleted successfully', deletedSyarat),
-      )
-    } catch (error: any) {
-      return serverErrorResponse(res, error)
-    }
-  },
-
 }
 
 export default SyaratController

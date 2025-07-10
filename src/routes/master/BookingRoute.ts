@@ -1,11 +1,11 @@
 import BookingController from '@/controllers/master/BookingController'
-import { AuthMiddleware } from '@/middleware/AuthMiddleware'
+// import { AuthMiddleware } from '@/middleware/AuthMiddleware'
 import { Router } from 'express'
 
 
 const router = Router()
 
-router.use(AuthMiddleware)
+// router.use(AuthMiddleware)
 
 router.get('/', BookingController.getAllBookings)
 router.post('/create', BookingController.createBooking)

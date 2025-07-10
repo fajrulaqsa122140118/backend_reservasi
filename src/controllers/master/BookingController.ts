@@ -67,14 +67,45 @@ const BookingController = {
   },
   createBooking: async (req: Request, res: Response): Promise<any> => {
     try {
-      const { mejaId, tanggal, harga, jadwalIds } = req.body
+      const { mejaId, tanggal, jadwalIds } = req.body
 
       // Validasi input
-      if (!mejaId || !tanggal || !harga || !jadwalIds || !Array.isArray(jadwalIds)) {
+      if (!mejaId || !tanggal || !jadwalIds || !Array.isArray(jadwalIds)) {
         return res.status(StatusCodes.BAD_REQUEST).json({
-          message: 'Field mejaId, tanggal, harga, dan jadwalIds wajib diisi dan jadwalIds harus berupa array.',
+          message: 'Field mejaId, tanggal, dan jadwalIds wajib diisi dan jadwalIds harus berupa array.',
         })
       }
+
+      // Validasi Saat Booking apakah toko sedang tutup atau tidak
+      const tanggalBooking = new Date(req.body.tanggal)
+
+      console.log('Tanggal Booking:', tanggalBooking)
+
+      const closedData = await prisma.closed.findFirst()
+
+      // if (isClosed) {
+      //   return res.status(400).json({
+      //     message: `Toko sedang tutup pada tanggal tersebut (${isClosed.Deskripsi})`,
+      //   })
+      // }
+      // Cek apakah ada jadwal tutup pada tanggal booking
+      if (closedData) {
+        const startDate = new Date(closedData.startdate)
+        const endDate = new Date(closedData.enddate)
+
+        console.log('Start Date:', startDate)
+        console.log('End Date:', endDate)
+        console.log('Tanggal Booking:', tanggalBooking)
+
+        if (tanggalBooking >= startDate && tanggalBooking <= endDate) {
+          return res.status(StatusCodes.BAD_REQUEST).json({
+            message: `Toko sedang tutup pada tanggal tersebut (${closedData.Deskripsi})`,
+          })
+        }
+
+      }
+
+      // lanjut proses booking kalau tidak ada jadwal tutup
 
       // Cek apakah meja tersedia
       const meja = await prisma.masterMeja.findFirst({
@@ -109,7 +140,7 @@ const BookingController = {
           meja: {
             connect: { id: Number(mejaId) } },
           Tanggal: new Date(tanggal),
-          Harga: harga,
+          Harga: meja.Harga,
           KodeBooking: kodeBooking,
         },
       })
