@@ -69,45 +69,26 @@ const BookingController = {
     try {
       const { mejaId, tanggal, jadwalIds } = req.body
 
-      // Validasi input
       if (!mejaId || !tanggal || !jadwalIds || !Array.isArray(jadwalIds)) {
         return res.status(StatusCodes.BAD_REQUEST).json({
           message: 'Field mejaId, tanggal, dan jadwalIds wajib diisi dan jadwalIds harus berupa array.',
         })
       }
 
-      // Validasi Saat Booking apakah toko sedang tutup atau tidak
-      const tanggalBooking = new Date(req.body.tanggal)
-
-      console.log('Tanggal Booking:', tanggalBooking)
+      const tanggalBooking = new Date(tanggal)
 
       const closedData = await prisma.closed.findFirst()
-
-      // if (isClosed) {
-      //   return res.status(400).json({
-      //     message: `Toko sedang tutup pada tanggal tersebut (${isClosed.Deskripsi})`,
-      //   })
-      // }
-      // Cek apakah ada jadwal tutup pada tanggal booking
       if (closedData) {
         const startDate = new Date(closedData.startdate)
         const endDate = new Date(closedData.enddate)
-
-        console.log('Start Date:', startDate)
-        console.log('End Date:', endDate)
-        console.log('Tanggal Booking:', tanggalBooking)
 
         if (tanggalBooking >= startDate && tanggalBooking <= endDate) {
           return res.status(StatusCodes.BAD_REQUEST).json({
             message: `Toko sedang tutup pada tanggal tersebut (${closedData.Deskripsi})`,
           })
         }
-
       }
 
-      // lanjut proses booking kalau tidak ada jadwal tutup
-
-      // Cek apakah meja tersedia
       const meja = await prisma.masterMeja.findFirst({
         where: { id: Number(mejaId) },
       })
@@ -121,7 +102,7 @@ const BookingController = {
       const validJadwals = await prisma.jadwalMeja.findMany({
         where: {
           id: { in: jadwalIds },
-          mejaId: mejaId,  // memastikan jadwal memang milik meja itu
+          mejaId: mejaId,
         },
       })
 
@@ -131,35 +112,49 @@ const BookingController = {
         })
       }
 
-      // Generate kode booking otomatis
-      const kodeBooking = generateKodeBooking(tanggal)
+      // Hitung total jam dari jadwal
+      const getDurationInHours = (startTime: string, endTime: string): number => {
+        const [startHour, startMinute] = startTime.split(':').map(Number)
+        const [endHour, endMinute] = endTime.split(':').map(Number)
+        const start = new Date(); start.setHours(startHour, startMinute, 0, 0)
+        const end = new Date(); end.setHours(endHour, endMinute, 0, 0)
+        const diffMs = end.getTime() - start.getTime()
+        return diffMs / (1000 * 60 * 60)
+      }
 
-      // 1. Simpan booking utama
-      const booking = await prisma.booking.create({
-        data: {
-          meja: {
-            connect: { id: Number(mejaId) } },
-          Tanggal: new Date(tanggal),
-          Harga: meja.Harga,
-          KodeBooking: kodeBooking,
-        },
+      let totalDurasiJam = 0
+      validJadwals.forEach(jadwal => {
+        totalDurasiJam += getDurationInHours(jadwal.StartTime, jadwal.EndTime)
       })
 
-      // 2. Simpan jam-jam booking berdasarkan jadwalIds
+      const kodeBooking = generateKodeBooking(tanggal)
+
+      const booking = await prisma.booking.create({
+        data: {
+          meja: { connect: { id: Number(mejaId) } },
+          Tanggal: tanggalBooking,
+          Harga: meja.Harga,
+          KodeBooking: kodeBooking,
+          durasiJam: totalDurasiJam.toString(), // pastikan field ini tersedia di model
+        },
+      })
+      const totalBayar = totalDurasiJam * Number(meja.Harga)
+
+
       const jamBookingData = jadwalIds.map((jadwalId: number) => ({
         BookingId: booking.id,
         idMeja: Number(mejaId),
         idJadwalMeja: jadwalId,
       }))
 
-      await prisma.jamBooking.createMany({
-        data: jamBookingData,
-      })
+      await prisma.jamBooking.createMany({ data: jamBookingData })
 
       return res.status(StatusCodes.CREATED).json(
         ResponseData(StatusCodes.CREATED, 'Booking berhasil dibuat', {
           booking,
+          totalDurasiJam,
           jam_booking: jamBookingData,
+          totalBayar,
         }),
       )
     } catch (error: any) {
@@ -254,3 +249,4 @@ const BookingController = {
   },
 }
 export default BookingController
+ 

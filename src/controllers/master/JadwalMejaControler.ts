@@ -66,6 +66,23 @@ const JadwalMejaController = {
           message: `Meja dengan id ${mejaId} tidak ditemukan`,
         })
       }
+      // Validasi agar tidak ada jadwal bentrok pada meja yang sama
+      const jadwalBentrok = await prisma.jadwalMeja.findFirst({
+        where: {
+          mejaId: Number(mejaId),
+          AND: [
+            { StartTime: { lt: EndTime } },
+            { EndTime: { gt: StartTime } },
+          ],
+        },
+      })
+
+      if (jadwalBentrok) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: 'Jadwal ini bentrok atau berada di dalam jadwal lain pada meja yang sama atau sudah dibooking.',
+        })
+      }
+
 
       //   // Simpan ke database
       const jadwal = await prisma.jadwalMeja.create({
@@ -121,6 +138,25 @@ const JadwalMejaController = {
           message: `Meja dengan id ${mejaId} tidak ditemukan`,
         })
       }
+      
+      // Validasi bentrok (kecuali dirinya sendiri)
+      const jadwalBentrok = await prisma.jadwalMeja.findFirst({
+        where: {
+          id: { not: jadwalId }, // hindari dirinya sendiri
+          mejaId: Number(mejaId),
+          AND: [
+            { StartTime: { lt: EndTime } },
+            { EndTime: { gt: StartTime } },
+          ],
+        },
+      })
+
+      if (jadwalBentrok) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: 'Jadwal ini bentrok atau berada di dalam jadwal lain pada meja yang sama atau sudah di booking.',
+        })
+      }
+
 
       // Update JadwalMeja
       const updatedJadwal = await prisma.jadwalMeja.update({

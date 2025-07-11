@@ -6,7 +6,8 @@ import { ResponseData, serverErrorResponse } from '@/utilities'
 import { jwtPayloadInterface } from '@/utilities/JwtHanldler'
 import { getIO } from '@/config/socket'
 import { logActivity } from '@/utilities/LogActivity'
-import { FileType, uploadFileToSupabase } from '@/utilities/AwsHandler'
+import { FileType, uploadFileToSupabase, deleteFileFromSupabase } from '@/utilities/AwsHandler'
+import { boolean } from 'zod'
 
 
 const MasterMejaController = {
@@ -152,44 +153,106 @@ const MasterMejaController = {
       return serverErrorResponse(res, error)
     }
   },
-  updateMeja: async (req: Request, res: Response): Promise<any> => {
+  updateMeja: async (req: Request, res: Response): Promise<Response> => {
     try {
+      const { id } = req.params
+      const reqBody = req.body
+      const file = req.file
       const userLogin = req.user as jwtPayloadInterface
-      const mejaId = parseInt(req.params.id as string)
-      const reqBody = req.body as any
 
-      const mejaData = await prisma.masterMeja.findUnique({
-        where: { id: mejaId },
-      })
-
-      if (!mejaData) {
-        return res
-          .status(StatusCodes.NOT_FOUND)
-          .json(ResponseData(StatusCodes.NOT_FOUND, 'Meja not found'))
+      if (!reqBody.nama || !reqBody.harga || !reqBody.noMeja || !reqBody.TipeMeja) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: 'Field nama, harga, noMeja, dan TipeMeja wajib diisi',
+        })
       }
 
+      const existingMeja = await prisma.masterMeja.findUnique({
+        where: { id: Number(id) },
+      })
+
+      if (!existingMeja) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          message: 'Meja tidak ditemukan',
+        })
+      }
+
+      // Cek apakah nama meja baru sudah digunakan meja lain
+      const duplicateMeja = await prisma.masterMeja.findFirst({
+        where: {
+          NamaMeja: reqBody.nama,
+          NOT: { id: Number(id) },
+        },
+      })
+
+      if (duplicateMeja) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: `Nama meja "${reqBody.nama}" sudah digunakan oleh meja lain`,
+        })
+      }
+
+      // Jika tidak ada file baru, update hanya data selain foto
+      if (!file) {
+        const updatedMeja = await prisma.masterMeja.update({
+          where: { id: Number(id) },
+          data: {
+            NamaMeja: reqBody.nama,
+            Deskripsi: reqBody.deskripsi,
+            Harga: reqBody.harga,
+            NoMeja: reqBody.noMeja,
+            TipeMeja: reqBody.TipeMeja,
+            IsActive : reqBody.isActive !== boolean ? reqBody.isActive : true, // Default to true if not provided
+          },
+        })
+
+        logActivity(userLogin.id, 'UPDATE', `Updated meja (tanpa foto) with ID ${updatedMeja.id}`)
+
+        return res.status(StatusCodes.OK).json(
+          ResponseData(StatusCodes.OK, 'Meja berhasil diperbarui', updatedMeja),
+        )
+      }
+
+      // Jika ada file baru, hapus file lama terlebih dahulu
+      const oldFilePath = `meja/${existingMeja.Foto}`
+      const deleteResult = await deleteFileFromSupabase(oldFilePath)
+
+      if (!deleteResult) {
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+          message: 'Gagal menghapus file lama dari Supabase',
+        })
+      }
+
+      // Upload foto baru
+      const fileUpload: FileType = {
+        mimetype: file.mimetype,
+        buffer: file.buffer,
+        originalname: file.originalname,
+      }
+
+      const imageUrl = await uploadFileToSupabase(fileUpload, 'meja')
+
+      if (!imageUrl) {
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+          message: 'Gagal mengunggah gambar baru ke Supabase',
+        })
+      }
+
+      // Update database dengan foto baru
       const updatedMeja = await prisma.masterMeja.update({
-        where: { id: mejaId },
+        where: { id: Number(id) },
         data: {
           NamaMeja: reqBody.nama,
-          Foto: reqBody.foto,
           Deskripsi: reqBody.deskripsi,
           Harga: reqBody.harga,
           NoMeja: reqBody.noMeja,
           TipeMeja: reqBody.TipeMeja,
+          Foto: imageUrl.url,
         },
       })
 
-      getIO().emit('mejaUpdated', updatedMeja)
-
-      logActivity(
-        userLogin.id,
-        'UPDATE',
-        `Updated meja with ID ${mejaId}`,
-      )
+      logActivity(userLogin.id, 'UPDATE', `Updated meja (dengan foto) with ID ${updatedMeja.id}`)
 
       return res.status(StatusCodes.OK).json(
-        ResponseData(StatusCodes.OK, 'Meja updated successfully', updatedMeja),
+        ResponseData(StatusCodes.OK, 'Meja berhasil diperbarui', updatedMeja),
       )
     } catch (error: any) {
       return serverErrorResponse(res, error)

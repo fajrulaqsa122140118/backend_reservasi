@@ -126,6 +126,8 @@ model Booking {
   Tanggal DateTime
   Harga String
   KodeBooking String @unique
+  durasiJam String?
+  TotalBayar String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime?

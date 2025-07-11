@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Request, Response } from 'express'
 import { startOfYear, endOfYear, getMonth } from 'date-fns'
 import prisma from '@/config/database'
@@ -25,6 +26,13 @@ const DashboardController = {
         },
       })
 
+      // Hitung total meja aktif
+      const activeTableCount = await prisma.masterMeja.count({
+        where: {
+          IsActive: true,
+        },
+      })
+
       // Bulan dalam format pendek
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -33,6 +41,7 @@ const DashboardController = {
         bulan: monthNames[i],
         totalBooking: 0,
         totalPendapatan: 0,
+        totalMeja: activeTableCount,
       }))
 
       // Loop hasil booking dan hitung berdasarkan bulan
@@ -52,7 +61,5 @@ const DashboardController = {
 }
   
 
-
-  
 
 export default DashboardController
