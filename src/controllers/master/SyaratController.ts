@@ -25,7 +25,8 @@ const SyaratController = {
   },
   updateSyarat: async (req: Request, res: Response): Promise<any> => {
     try {
-   
+
+      
       const { syarat } = req.body
 
       const syaratId =  Number(1)

@@ -19,6 +19,7 @@ import { BuktiPembayaranRouter } from './master/BuktiPembayaranRoute'
 import { ClosedRouter } from './master/ClosedRoute'
 import { SyaratRouter } from './master/SyaratRoute'
 import { DashboardRouter } from './master/DashboardRoute'
+import { SettingWebRouter } from './master/SettingWebRoute'
 
 const fileUpload = fileUploadMiddleware.fileUploadHandler('uploads', {
   maxFileSize: CONFIG.maxFileSize as number,
@@ -71,4 +72,7 @@ export const appRouter = async function (app: Express): Promise<void> {
   // Dashboard route
   app.use(CONFIG.apiUrl + 'dashboard', DashboardRouter())
 
+  // SettingWebsite route
+  app.use(CONFIG.apiUrl + 'master/setting-web', SettingWebRouter())
 }
+
