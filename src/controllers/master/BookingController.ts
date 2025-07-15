@@ -67,13 +67,17 @@ const BookingController = {
   },
   createBooking: async (req: Request, res: Response): Promise<any> => {
     try {
-      const { mejaId, tanggal, jadwalIds } = req.body
+      const { tanggal, jadwalIds } = req.body
 
-      if (!mejaId || !tanggal || !jadwalIds || !Array.isArray(jadwalIds)) {
+      if (!tanggal || !jadwalIds || !Array.isArray(jadwalIds)) {
         return res.status(StatusCodes.BAD_REQUEST).json({
-          message: 'Field mejaId, tanggal, dan jadwalIds wajib diisi dan jadwalIds harus berupa array.',
+          message: 'Field tanggal, dan jadwalIds wajib diisi dan jadwalIds harus berupa array.',
         })
       }
+      const meja = await prisma.jadwalMeja.findFirst({
+        where: { id: jadwalIds[0] }, // ambil meja dari jadwal pertama
+        include: { meja: true },
+      })
 
       const tanggalBooking = new Date(tanggal)
 
@@ -89,20 +93,10 @@ const BookingController = {
         }
       }
 
-      const meja = await prisma.masterMeja.findFirst({
-        where: { id: Number(mejaId) },
-      })
-
-      if (!meja) {
-        return res.status(StatusCodes.NOT_FOUND).json({
-          message: 'Meja tidak ditemukan',
-        })
-      }
-
       const validJadwals = await prisma.jadwalMeja.findMany({
         where: {
           id: { in: jadwalIds },
-          mejaId: mejaId,
+          mejaId: meja?.meja.id,
         },
       })
 
@@ -111,6 +105,27 @@ const BookingController = {
           message: 'Jadwal tidak sesuai dengan meja yang dipilih.',
         })
       }
+      // Cek jadwalId yang sudah dibooking di tanggal yang sama
+      const existingBooking = await prisma.jamBooking.findMany({
+        where: {
+          idJadwalMeja: { in: jadwalIds },
+          Booking: {
+            Tanggal: tanggalBooking,
+          },
+        },
+        include: {
+          JadwalMeja: true,
+        },
+      })
+
+      if (existingBooking.length > 0) {
+        return res.status(StatusCodes.CONFLICT).json({
+          status: StatusCodes.CONFLICT,
+          message: 'Beberapa jadwal sudah dibooking di tanggal tersebut. Silakan pilih jadwal lain.',
+          data: existingBooking.map(b => b.JadwalMeja.StartTime + ' - ' + b.JadwalMeja.EndTime),
+        })
+      }
+
 
       // Hitung total jam dari jadwal
       const getDurationInHours = (startTime: string, endTime: string): number => {
@@ -131,19 +146,23 @@ const BookingController = {
 
       const booking = await prisma.booking.create({
         data: {
-          meja: { connect: { id: Number(mejaId) } },
+          meja: { connect: { id: Number(meja?.meja.id) } },
           Tanggal: tanggalBooking,
-          Harga: meja.Harga,
+          Harga: meja?.meja.Harga as string,
           KodeBooking: kodeBooking,
           durasiJam: totalDurasiJam.toString(), // pastikan field ini tersedia di model
         },
       })
-      const totalBayar = totalDurasiJam * Number(meja.Harga)
+      const totalBayar = totalDurasiJam * Number(meja?.meja.Harga)
+
+
+      // buat agar pengecekan jadwal tidak bentrok
+      // gausah pake meja, karena sudah dibawa jadwal meja
 
 
       const jamBookingData = jadwalIds.map((jadwalId: number) => ({
         BookingId: booking.id,
-        idMeja: Number(mejaId),
+        idMeja: Number(meja?.meja.id),
         idJadwalMeja: jadwalId,
       }))
 

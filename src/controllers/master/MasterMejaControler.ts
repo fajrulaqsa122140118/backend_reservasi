@@ -331,9 +331,31 @@ const MasterMejaController = {
   getMejaById: async (req: Request, res: Response): Promise<any> => {
     try {
       const mejaId = parseInt(req.params.id as string)
+      const { startDate, endDate } = req.query
+      const whereCondition = {} as any
 
+      // Atur rentang tanggal
+      const gteDate = startDate
+        ? new Date(String(startDate) + 'T00:00:00.000Z')
+        : new Date(new Date().setHours(0, 0, 0, 0))
+
+      const lteDate = endDate
+        ? new Date(String(endDate) + 'T23:59:59.999Z')
+        : new Date(new Date().setHours(23, 59, 59, 999))
+
+      whereCondition.Booking = {
+        Tanggal: {
+          gte: gteDate,
+          lte: lteDate,
+        },
+      }
+
+      // Ambil data meja dan semua jadwalnya
       const mejaData = await prisma.masterMeja.findUnique({
         where: { id: mejaId },
+        include: {
+          JadwalMeja: true,
+        },
       })
 
       if (!mejaData) {
@@ -342,13 +364,39 @@ const MasterMejaController = {
           .json(ResponseData(StatusCodes.NOT_FOUND, 'Meja not found'))
       }
 
-      return res.status(StatusCodes.OK).json(
-        ResponseData(StatusCodes.OK, 'Meja found', mejaData),
-      )
+      // Ambil semua jamBooking yang sesuai tanggal dan meja
+      const jamBooking = await prisma.jamBooking.findMany({
+        where: {
+          idMeja: mejaId,
+          ...whereCondition,
+        },
+        select: {
+          idJadwalMeja: true,
+        },
+      })
+
+      // Tandai jadwal yang sudah dibooking
+      const bookedSet = new Set(jamBooking.map((jb) => jb.idJadwalMeja))
+
+      // Tambahkan status manual ke setiap JadwalMeja
+      const jadwalWithStatus = mejaData.JadwalMeja.map((jadwal) => ({
+        ...jadwal,
+        status: bookedSet.has(jadwal.id) ? 'Booked' : 'Tersedia',
+      }))
+
+      console.log(jamBooking)
+
+      // Replace jadwal di response
+      mejaData.JadwalMeja = jadwalWithStatus
+
+      return res
+        .status(StatusCodes.OK)
+        .json(ResponseData(StatusCodes.OK, 'Meja found', mejaData))
     } catch (error: any) {
       return serverErrorResponse(res, error)
     }
   },
+
 }
 
 export default MasterMejaController
