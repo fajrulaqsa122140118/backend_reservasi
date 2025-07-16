@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Qris" ALTER COLUMN "id" DROP DEFAULT;
+DROP SEQUENCE "Qris_id_seq";
