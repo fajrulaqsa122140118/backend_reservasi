@@ -25,6 +25,9 @@ const ClosedController = {
       const start = new Date(startdate)
       const end = new Date(enddate)
 
+      console.log(start)
+      console.log( end)
+      
       if (start >= end) {
         return res.status(400).json({ message: 'Start date harus < end date' })
       }
