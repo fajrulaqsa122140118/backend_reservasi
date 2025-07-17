@@ -127,6 +127,7 @@ model Booking {
   KodeBooking String     @unique
   durasiJam   String?
   TotalBayar  String?
+  konfirmasi  Boolean    @default(false)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   deletedAt   DateTime?

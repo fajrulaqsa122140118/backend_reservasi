@@ -1,4 +1,4 @@
-import BiodataController from '@/controllers/master/BiodataBookingController'
+import BiodataController from '@/controllers/guest/BiodataBookingController'
 // import { AuthMiddleware } from '@/middleware/AuthMiddleware'
 import { Router } from 'express'
 

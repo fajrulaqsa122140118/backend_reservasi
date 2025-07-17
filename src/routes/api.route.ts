@@ -1,5 +1,4 @@
 import { CONFIG } from '@/config'
-import { fileUploadMiddleware } from '@/middleware/FileUploadMiddleware'
 import { ResponseData } from '@/utilities'
 import {
   type Express,
@@ -9,24 +8,17 @@ import {
 import { StatusCodes } from 'http-status-codes'
 import { AuthRoute } from './auth/AuthRoute'
 import { UserRouter } from './master/UserRoute'
-import TestController from '@/controllers/master/TestController'
 import { MasterMejaRouter } from './master/MasterMejaRoute'
 import { JadwalMejaRouter } from './master/JadwalMejaRoute'
-import BookingRouter from './master/BookingRoute'
-import { BiodataBookingRouter } from './master/BiodataBookingRoute'
+import BookingRouter from './guest/BookingRoute'
+import { BiodataBookingRouter } from './guest/BiodataBookingRoute'
 import { BannerRouter } from './master/BannerRoute'
-import { BuktiPembayaranRouter } from './master/BuktiPembayaranRoute'
+import { BuktiPembayaranRouter } from './guest/BuktiPembayaranRoute'
 import { ClosedRouter } from './master/ClosedRoute'
 import { SyaratRouter } from './master/SyaratRoute'
 import { DashboardRouter } from './master/DashboardRoute'
 import { SettingWebRouter } from './master/SettingWebRoute'
 import { QrisRouter } from './master/QrisRoute'
-
-const fileUpload = fileUploadMiddleware.fileUploadHandler('uploads', {
-  maxFileSize: CONFIG.maxFileSize as number,
-  allowedFileTypes : ['image/webp', 'image/jpeg', 'image/png', 'image/jpg', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv', 'application/csv'],
-  saveToBucket: CONFIG.saveToBucket,
-})
 
 export const appRouter = async function (app: Express): Promise<void> {
   app.get('/', (req: Request, res: Response) => {
@@ -44,10 +36,7 @@ export const appRouter = async function (app: Express): Promise<void> {
   // master route
   app.use(CONFIG.apiUrl + 'master/user', UserRouter())
   app.use(CONFIG.apiUrl + 'master/meja', MasterMejaRouter())
-  
 
-  app.post(CONFIG.apiUrl + 'test-up-file', fileUpload.single('images'), TestController.testFileUploadToS3)
-  app.post(CONFIG.apiUrl + 'test-up-delete', fileUpload.single('images'), TestController.deleteFileFromS3)
 
   // jadwal meja route
   app.use(CONFIG.apiUrl + 'master/jadwal-meja', JadwalMejaRouter())

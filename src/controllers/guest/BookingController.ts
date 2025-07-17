@@ -156,10 +156,6 @@ const BookingController = {
       const totalBayar = totalDurasiJam * Number(meja?.meja.Harga)
 
 
-      // buat agar pengecekan jadwal tidak bentrok
-      // gausah pake meja, karena sudah dibawa jadwal meja
-
-
       const jamBookingData = jadwalIds.map((jadwalId: number) => ({
         BookingId: booking.id,
         idMeja: Number(meja?.meja.id),
@@ -262,6 +258,43 @@ const BookingController = {
     
       return res.status(StatusCodes.OK).json(
         ResponseData(StatusCodes.OK, 'Success', bookingData),
+      )
+    } catch (error: any) {
+      return serverErrorResponse(res, error)
+    }
+  },
+  updateKonfirmasi: async (req: Request, res: Response): Promise<any> => {
+    try {
+      const bookingId = parseInt(req.params.id as string)
+    
+      const bookingData = await prisma.booking.findUnique({
+        where: { id: bookingId },
+        include: {
+          BuktiPembayaran: true,
+        },
+      })
+        
+      if (!bookingData) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          message: 'Booking tidak ditemukan',
+        })
+      }
+    
+      if (bookingData?.BuktiPembayaran.length !== 1)  {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: 'Bukti pembayaran belum diupload',
+        })
+      }
+    
+      const updatedBookingData = await prisma.booking.update({
+        where: { id: bookingId },
+        data: { 
+          konfirmasi: bookingData?.konfirmasi === true ? false : true, 
+        },
+      })
+    
+      return res.status(StatusCodes.OK).json(
+        ResponseData(StatusCodes.OK, 'Success', updatedBookingData),
       )
     } catch (error: any) {
       return serverErrorResponse(res, error)

@@ -4,7 +4,6 @@ import { Pagination } from '@/utilities/Pagination'
 import prisma from '@/config/database'
 import { ResponseData, serverErrorResponse } from '@/utilities'
 import { FileType, uploadFileToSupabase, deleteFileFromSupabase } from '@/utilities/AwsHandler'
-import { supabase } from '@/config/supabase'
 import path from 'path'
 
 const QrisController = {
