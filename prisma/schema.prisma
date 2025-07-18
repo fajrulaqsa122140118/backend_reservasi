@@ -209,15 +209,12 @@ model SettinganWeb {
   deskripsi      String?
   alamat         String?
   kodePos        String?
-  telepon        String[] // multiple numbers
+  telepon        String[] // multiple numbers\
   faks           String?
   email          String?
   jamOperasional String?
 
-  menuQuick   Json
-  menuTentang Json
-  menuKontak  Json
-  sosialMedia Json
+  sosialMedia Json?
 
   copyright String?
   developer String?
