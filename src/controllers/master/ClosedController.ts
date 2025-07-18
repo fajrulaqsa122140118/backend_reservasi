@@ -42,6 +42,8 @@ const ClosedController = {
         closed = await prisma.closed.update({
           where: { id: existingClosed.id },
           data: {
+            startdate: start,
+            enddate: end,
             Deskripsi: deskripsi,
             updatedAt: new Date(),
           },
