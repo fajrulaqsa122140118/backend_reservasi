@@ -2,97 +2,196 @@ import { Request, Response } from 'express'
 import prisma from '@/config/database'
 
 const ClosedController = {
-  getAllClosed: async (req: Request, res: Response) => {
-    try {
-      const data = await prisma.closed.findMany({
-        where: { deletedAt: null },
-        orderBy: { startdate: 'desc' },
-      })
 
-      return res.status(200).json({ message: 'Semua jadwal tutup', data })
-    } catch (err: any) {
-      return res.status(500).json({ message: 'Gagal ambil data', error: err.message })
-    }
-  },
-  createOrUpdateClosed: async (req: Request, res: Response) => {
+  createClosed: async (req: Request, res: Response) => {
     try {
-      const { startdate, enddate, deskripsi } = req.body
+      const { startDate, reason } = req.body
 
-      if (!startdate || !enddate || !deskripsi) {
+      if (!startDate || !reason) {
         return res.status(400).json({ message: 'Semua field wajib diisi' })
       }
 
-      const start = new Date(startdate)
-      const end = new Date(enddate)
-
-      console.log(start)
-      console.log( end)
-      
-      if (start >= end) {
-        return res.status(400).json({ message: 'Start date harus < end date' })
+      const date = new Date(startDate)
+      if (isNaN(date.getTime())) {
+        return res.status(400).json({ message: 'Tanggal tidak valid' })
       }
 
-      // Cek apakah range ini sudah ada
-      const existingClosed = await prisma.closed.findFirst()
+      // Cek apakah tanggal ini sudah ditutup
+      const existing = await prisma.closed.findFirst({
+        where: {
+          date: date,
+          type: 'TUTUP',
+        },
+      })
 
-      let closed
-
-      if (existingClosed) {
-      // Update jika sudah ada
-        closed = await prisma.closed.update({
-          where: { id: existingClosed.id },
-          data: {
-            startdate: start,
-            enddate: end,
-            Deskripsi: deskripsi,
-            updatedAt: new Date(),
-          },
-        })
-      } else {
-      // Create jika belum ada
-        closed = await prisma.closed.create({
-          data: {
-            startdate: start,
-            enddate: end,
-            Deskripsi: deskripsi,
-          },
+      if (existing) {
+        return res.status(400).json({
+          message: `Tanggal ${startDate} sudah ditutup sebelumnya.`,
         })
       }
 
-      return res.status(200).json({
-        message: existingClosed ? 'Closed updated' : 'Closed created',
-        data: closed,
+      // Buat entri tutup
+      const created = await prisma.closed.create({
+        data: {
+          date,
+          type: 'TUTUP',
+          reason,
+        },
+      })
+
+      return res.status(201).json({
+        message: 'Tanggal berhasil ditutup',
+        data: created,
       })
     } catch (err: any) {
       return res.status(500).json({
-        message: 'Error saat memproses closed',
+        message: 'Terjadi kesalahan saat menutup tanggal',
+        error: err.message,
+      })
+    }
+  },
+  createOpen: async (req: Request, res: Response) => {
+    try {
+      const { closedIds, reason } = req.body
+
+      if (!closedIds || !Array.isArray(closedIds) || closedIds.length === 0 || !reason) {
+        return res.status(400).json({ message: 'closedIds (array) dan reason wajib diisi' })
+      }
+
+      // Ambil data penutupan berdasarkan ID
+      const closedEntries = await prisma.closed.findMany({
+        where: {
+          id: { in: closedIds },
+          type: 'TUTUP',
+        },
+      })
+
+      if (closedEntries.length === 0) {
+        return res.status(404).json({ message: 'Data penutupan tidak ditemukan' })
+      }
+
+      // Cek apakah sudah pernah dibuka sebelumnya
+      const alreadyOpened = await prisma.closed.findMany({
+        where: {
+          type: 'BUKA',
+          referenceId: { in: closedIds },
+        },
+      })
+
+      const alreadyOpenedIds = new Set(alreadyOpened.map(o => o.referenceId))
+      const toOpen = closedEntries.filter(entry => !alreadyOpenedIds.has(entry.id))
+
+      if (toOpen.length === 0) {
+        return res.status(400).json({ message: 'Semua entri sudah pernah dibuka sebelumnya' })
+      }
+
+      // Buat entri BUKA
+      const created = await prisma.closed.createMany({
+        data: toOpen.map(entry => ({
+          date: entry.date,
+          type: 'BUKA',
+          reason,
+          referenceId: entry.id,
+        })),
+      })
+
+      return res.status(200).json({
+        message: 'Tanggal berhasil dibuka kembali',
+        data: created,
+      })
+    } catch (err: any) {
+      return res.status(500).json({
+        message: 'Terjadi kesalahan saat membuka tanggal',
+        error: err.message,
+      })
+    }
+  },
+  deleteClosed: async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params
+
+      const closedId = parseInt(id)
+      if (isNaN(closedId)) {
+        return res.status(400).json({ message: 'ID tidak valid' })
+      }
+
+      // Cek apakah closed ada
+      const closed = await prisma.closed.findUnique({
+        where: { id: closedId },
+      })
+
+      if (!closed) {
+        return res.status(404).json({ message: 'Closed tidak ditemukan' })
+      }
+
+      // Hapus semua entri BUKA yang mereferensikan closed ini
+      await prisma.closed.deleteMany({
+        where: {
+          referenceId: closedId,
+        },
+      })
+
+      // Hapus closed utamanya
+      await prisma.closed.delete({
+        where: { id: closedId },
+      })
+
+      return res.status(200).json({
+        message: 'Closed dan referensi pembuka berhasil dihapus',
+      })
+    } catch (error: any) {
+      return res.status(500).json({
+        message: 'Gagal menghapus closed',
+        error: error.message,
+      })
+    }
+  },
+  getAllClosed: async (req: Request, res: Response) => {
+    try {
+      const allClosed = await prisma.closed.findMany({
+        orderBy: { date: 'asc' },
+        include: {
+          reference: true,     // Menunjukkan TUTUP yang dirujuk jika type == BUKA
+          openedBy: true,       // Menunjukkan BUKA yang merujuk ke entri ini jika type == TUTUP
+        },
+      })
+
+      return res.status(200).json({
+        message: 'Data closed schedule berhasil diambil',
+        data: allClosed,
+      })
+    } catch (err: any) {
+      return res.status(500).json({
+        message: 'Gagal mengambil data closed schedule',
         error: err.message,
       })
     }
   },
   getClosedById: async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id)
-      const closed = await prisma.closed.findUnique({ where: { id } })
+      const { id } = req.params
+
+      const closed = await prisma.closed.findUnique({
+        where: { id: Number(id) },
+        include: {
+          reference: true,    // Jika type = BUKA, tampilkan data TUTUP yang dirujuk
+          openedBy: true,      // Jika type = TUTUP, tampilkan semua BUKA yang merujuknya
+        },
+      })
 
       if (!closed) {
         return res.status(404).json({ message: 'Data tidak ditemukan' })
       }
 
-      return res.status(200).json({ message: 'Data ditemukan', data: closed })
+      return res.status(200).json({
+        message: 'Data closed schedule ditemukan',
+        data: closed,
+      })
     } catch (err: any) {
-      return res.status(500).json({ message: 'Internal error', error: err.message })
-    }
-  },
-  deleteClosed: async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id)
-
-      await prisma.closed.delete({ where: { id } })
-
-      return res.status(200).json({ message: 'Jadwal tutup dihapus permanen' })
-    } catch (err: any) {
-      return res.status(500).json({ message: 'Gagal menghapus data', error: err.message })
+      return res.status(500).json({
+        message: 'Terjadi kesalahan saat mengambil data',
+        error: err.message,
+      })
     }
   },
 }

@@ -185,15 +185,27 @@ model Banner {
   deletedAt DateTime?
 }
 
-model Closed {
-  id        Int       @id @default(autoincrement())
-  startdate DateTime
-  enddate   DateTime
-  Deskripsi String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+model closed {
+  id           Int       @id @default(autoincrement())
+date           DateTime      // Tanggal toko ditutup atau dibuka
+  type         ClosedType @default(TUTUP) // Tipe: TUTUP atau BUKA
+  reason       String?   // Alasan opsional untuk tutup/buka
+
+  // Relasi: Jika ini entri BUKA, mengacu ke ID dari entri TUTUP
+  referenceId  Int?      
+  reference    closed?   @relation("ClosedReference", fields: [referenceId], references: [id])
+  
+  // Relasi balik: Semua entri BUKA yang mengacu ke TUTUP ini
+  openedBy     closed[]  @relation("ClosedReference")
+
+  createdAt    DateTime  @default(now())
 }
+
+enum ClosedType {
+  TUTUP
+  BUKA
+}
+
 
 model syaratketentuan {
   id        Int       @id @default(autoincrement())

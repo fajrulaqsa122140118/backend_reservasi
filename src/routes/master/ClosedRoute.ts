@@ -7,10 +7,20 @@ export const ClosedRouter = (): Router => {
 
   router.use(AuthMiddleware)
 
+  // Create tutup (penutupan tanggal)
+  router.post('/tutup', ClosedController.createClosed)
+
+  // Create buka (membuka kembali tanggal tutup berdasarkan id tutup)
+  router.post('/buka', ClosedController.createOpen)
+
+  // Delete data tutup atau buka (soft delete atau hard delete, tergantung implementasi)
+  router.delete('/delete:id', ClosedController.deleteClosed)
+
+  // Get semua data closed
   router.get('/', ClosedController.getAllClosed)
-  router.post('/create', ClosedController.createOrUpdateClosed)
+
+  // Get detail closed berdasarkan ID
   router.get('/:id', ClosedController.getClosedById)
-  router.delete('/delete/:id', ClosedController.deleteClosed)
 
   return router
 }

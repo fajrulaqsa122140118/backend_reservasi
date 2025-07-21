@@ -74,23 +74,26 @@ const BookingController = {
           message: 'Field tanggal, dan jadwalIds wajib diisi dan jadwalIds harus berupa array.',
         })
       }
+
       const meja = await prisma.jadwalMeja.findFirst({
-        where: { id: jadwalIds[0] }, // ambil meja dari jadwal pertama
+        where: { id: jadwalIds[0] },
         include: { meja: true },
       })
 
       const tanggalBooking = new Date(tanggal)
 
-      const closedData = await prisma.closed.findFirst()
-      if (closedData) {
-        const startDate = new Date(closedData.startdate)
-        const endDate = new Date(closedData.enddate)
+      // ✅ Validasi data tutup (closed) dengan dukungan tipe 'TUTUP' dan rentang fleksibel
+      const closedData = await prisma.closed.findFirst({
+        where: {
+          type: 'TUTUP',
+          date: { lte: tanggalBooking },
+        },
+      })
 
-        if (tanggalBooking >= startDate && tanggalBooking <= endDate) {
-          return res.status(StatusCodes.BAD_REQUEST).json({
-            message: `Toko sedang tutup pada tanggal tersebut (${closedData.Deskripsi})`,
-          })
-        }
+      if (closedData) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: `Toko sedang tutup pada tanggal tersebut (${closedData.reason})`,
+        })
       }
 
       const validJadwals = await prisma.jadwalMeja.findMany({
@@ -105,7 +108,7 @@ const BookingController = {
           message: 'Jadwal tidak sesuai dengan meja yang dipilih.',
         })
       }
-      // Cek jadwalId yang sudah dibooking di tanggal yang sama
+
       const existingBooking = await prisma.jamBooking.findMany({
         where: {
           idJadwalMeja: { in: jadwalIds },
@@ -126,8 +129,6 @@ const BookingController = {
         })
       }
 
-
-      // Hitung total jam dari jadwal
       const getDurationInHours = (startTime: string, endTime: string): number => {
         const [startHour, startMinute] = startTime.split(':').map(Number)
         const [endHour, endMinute] = endTime.split(':').map(Number)
@@ -150,11 +151,11 @@ const BookingController = {
           Tanggal: tanggalBooking,
           Harga: meja?.meja.Harga as string,
           KodeBooking: kodeBooking,
-          durasiJam: totalDurasiJam.toString(), // pastikan field ini tersedia di model
+          durasiJam: totalDurasiJam.toString(),
         },
       })
-      const totalBayar = totalDurasiJam * Number(meja?.meja.Harga)
 
+      const totalBayar = totalDurasiJam * Number(meja?.meja.Harga)
 
       const jamBookingData = jadwalIds.map((jadwalId: number) => ({
         BookingId: booking.id,
@@ -176,6 +177,7 @@ const BookingController = {
       return serverErrorResponse(res, error)
     }
   },
+
   softdeleteBooking: async (req: Request, res: Response): Promise<any> => {
     try {
       const bookingId = parseInt(req.params.id as string)
