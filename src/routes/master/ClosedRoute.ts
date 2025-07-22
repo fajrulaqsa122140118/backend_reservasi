@@ -5,6 +5,12 @@ import ClosedController from '@/controllers/master/ClosedController'
 export const ClosedRouter = (): Router => {
   const router = Router()
 
+  // Get semua data closed
+  router.get('/', ClosedController.getAllClosed)
+
+  // Get detail closed berdasarkan ID
+  router.get('/:id', ClosedController.getClosedById)
+
   router.use(AuthMiddleware)
 
   // Create tutup (penutupan tanggal)
@@ -16,11 +22,7 @@ export const ClosedRouter = (): Router => {
   // Delete data tutup atau buka (soft delete atau hard delete, tergantung implementasi)
   router.delete('/delete:id', ClosedController.deleteClosed)
 
-  // Get semua data closed
-  router.get('/', ClosedController.getAllClosed)
 
-  // Get detail closed berdasarkan ID
-  router.get('/:id', ClosedController.getClosedById)
 
   return router
 }

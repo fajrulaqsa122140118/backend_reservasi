@@ -5,10 +5,12 @@ import { Router } from 'express'
 export const SyaratRouter = (): Router => {
   const router = Router()
 
-  router.use(AuthMiddleware)
-
   // Get syarat by id
   router.get('/:id', SyaratController.getSyaratById)
+  
+  router.use(AuthMiddleware)
+
+
 
   // Update syarat
   router.put('/update/:id', SyaratController.updateSyarat)

@@ -4,11 +4,13 @@ import { Router } from 'express'
 
 export const UserRouter = (): Router => {
   const router = Router()
+  
+  router.get('/', UserController.getAllUser)
+  router.get('/:id', UserController.getUserById)
 
   router.use(AuthMiddleware)
 
-  router.get('/', UserController.getAllUser)
-  router.get('/:id', UserController.getUserById)
+
   router.post('/', UserController.createUser)
   router.put('/:id', UserController.updateUser)
   router.delete('/:id/soft', UserController.softDeleteUser)

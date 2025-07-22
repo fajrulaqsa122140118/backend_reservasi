@@ -6,10 +6,11 @@ import { AuthMiddleware } from '@/middleware/AuthMiddleware'
 export const QrisRouter = (): Router => {
   const router = express.Router()
 
+  router.get('/', QrisController.getAllQris)
   router.use(AuthMiddleware)
 
   // Get all QRIS data
-  router.get('/', QrisController.getAllQris)
+  
 
   // Create or update QRIS data
   router.post('/create', upload.single('file'), QrisController.createOrUpdateQris)

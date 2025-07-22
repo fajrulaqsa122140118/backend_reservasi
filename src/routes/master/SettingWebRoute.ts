@@ -5,14 +5,12 @@ import { upload } from '@/middleware/upload'
 
 export const SettingWebRouter = (): Router => {
   const router = express.Router()
-
+  router.get('/', SettingWebController.getAllSettings)
   router.use(AuthMiddleware)
 
   // Route untuk membuat atau memperbarui setting website
   router.post('/CreateOrUpdate', upload.single('logo'), SettingWebController.createOrUpdateSettingWeb)
 
-  // Route untuk mendapatkan semua setting website
-  router.get('/', SettingWebController.getAllSettings)
 
   return router
 }

@@ -7,13 +7,15 @@ import { AuthMiddleware } from '@/middleware/AuthMiddleware'
 export const BannerRouter = (): Router => {
 
   const router = express.Router()
+  
+  router.get('/', BannerController.getAllBanners)
+  router.get('/:id', BannerController.getBannerById)
 
   router.use(AuthMiddleware)
 
-  router.get('/', BannerController.getAllBanners)
+  
   router.post('/create', upload.single('banner'), BannerController.createBanner)
   router.put('/update/:id', upload.single('banner'), BannerController.updateBanner)
-  router.get('/:id', BannerController.getBannerById)
   router.delete('/:id', BannerController.deleteBanner)
   return router
 }
