@@ -126,7 +126,7 @@ model Booking {
   Harga       String
   KodeBooking String     @unique
   durasiJam   String?
-  TotalBayar  String?
+  TotalBayar  Float?
   konfirmasi  Boolean    @default(false)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -159,6 +159,7 @@ model BiodataBooking {
   Nama      String
   NoTelp    String
   Alamat    String
+  Email     String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
@@ -186,26 +187,25 @@ model Banner {
 }
 
 model closed {
-  id           Int       @id @default(autoincrement())
-date           DateTime      // Tanggal toko ditutup atau dibuka
-  type         ClosedType @default(TUTUP) // Tipe: TUTUP atau BUKA
-  reason       String?   // Alasan opsional untuk tutup/buka
+  id     Int        @id @default(autoincrement())
+  date   DateTime // Tanggal toko ditutup atau dibuka
+  type   ClosedType @default(TUTUP) // Tipe: TUTUP atau BUKA
+  reason String? // Alasan opsional untuk tutup/buka
 
   // Relasi: Jika ini entri BUKA, mengacu ke ID dari entri TUTUP
-  referenceId  Int?      
-  reference    closed?   @relation("ClosedReference", fields: [referenceId], references: [id])
-  
-  // Relasi balik: Semua entri BUKA yang mengacu ke TUTUP ini
-  openedBy     closed[]  @relation("ClosedReference")
+  referenceId Int?
+  reference   closed? @relation("ClosedReference", fields: [referenceId], references: [id])
 
-  createdAt    DateTime  @default(now())
+  // Relasi balik: Semua entri BUKA yang mengacu ke TUTUP ini
+  openedBy closed[] @relation("ClosedReference")
+
+  createdAt DateTime @default(now())
 }
 
 enum ClosedType {
   TUTUP
   BUKA
 }
-
 
 model syaratketentuan {
   id        Int       @id @default(autoincrement())

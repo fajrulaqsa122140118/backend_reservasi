@@ -3,11 +3,25 @@ import { Request, Response } from 'express'
 import { Pagination } from '@/utilities/Pagination'
 import prisma from '@/config/database'
 import { ResponseData, serverErrorResponse } from '@/utilities'
+import { sendEmail } from '@/utilities/MailerHandler'
+import { PesanKonfirmasi } from '@/utilities/TemplatingEmail'
 
 function generateKodeBooking(tanggal: string): string {
   const formatTanggal = tanggal.replace(/-/g, '') // 2025-07-03 → 20250703
   const random = Math.random().toString(36).substring(2, 6).toUpperCase() // 4 karakter acak
   return `BK-${formatTanggal}-${random}`
+}
+
+function formatDateToIndonesian(date: Date): string {
+  const formatted = new Intl.DateTimeFormat('id-ID', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Asia/Jakarta',
+    hour12: false,
+  }).format(date) 
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1)
 }
 
 const BookingController = {
@@ -32,20 +46,14 @@ const BookingController = {
               select: {
                 id: true,
                 NamaMeja: true,
-                JamBooking: {
-                  select: {
-                    JadwalMeja: true,
-                  },
-                },
               },
             },
-            BuktiPembayaran: {
-              select: {
-                id: true,
-                Foto: true,
-                createdAt: true,
+            JamBooking: {
+              include: {
+                JadwalMeja: true,
               },
             },
+            BiodataBooking: true,
           },
           skip: page.offset,
           take: page.limit,
@@ -54,13 +62,15 @@ const BookingController = {
         prisma.booking.count({ where: whereCondition }),
       ])
 
-      return res.status(StatusCodes.OK).json(
-        ResponseData(
-          StatusCodes.OK,
-          showDeleted ? 'Including soft-deleted data' : 'Success',
-          page.paginate({ count, rows: bookingData }),
-        ),
-      )
+      return res
+        .status(StatusCodes.OK)
+        .json(
+          ResponseData(
+            StatusCodes.OK,
+            showDeleted ? 'Including soft-deleted data' : 'Success',
+            page.paginate({ count, rows: bookingData }),
+          ),
+        )
     } catch (error: any) {
       return serverErrorResponse(res, error)
     }
@@ -71,7 +81,8 @@ const BookingController = {
 
       if (!tanggal || !jadwalIds || !Array.isArray(jadwalIds)) {
         return res.status(StatusCodes.BAD_REQUEST).json({
-          message: 'Field tanggal, dan jadwalIds wajib diisi dan jadwalIds harus berupa array.',
+          message:
+            'Field tanggal, dan jadwalIds wajib diisi dan jadwalIds harus berupa array.',
         })
       }
 
@@ -82,11 +93,13 @@ const BookingController = {
 
       const tanggalBooking = new Date(tanggal)
 
-      // ✅ Validasi data tutup (closed) dengan dukungan tipe 'TUTUP' dan rentang fleksibel
       const closedData = await prisma.closed.findFirst({
         where: {
           type: 'TUTUP',
-          date: { lte: tanggalBooking },
+          date: tanggalBooking,
+          openedBy: {
+            none: {},
+          },
         },
       })
 
@@ -124,24 +137,35 @@ const BookingController = {
       if (existingBooking.length > 0) {
         return res.status(StatusCodes.CONFLICT).json({
           status: StatusCodes.CONFLICT,
-          message: 'Beberapa jadwal sudah dibooking di tanggal tersebut. Silakan pilih jadwal lain.',
-          data: existingBooking.map(b => b.JadwalMeja.StartTime + ' - ' + b.JadwalMeja.EndTime),
+          message:
+            'Beberapa jadwal sudah dibooking di tanggal tersebut. Silakan pilih jadwal lain.',
+          data: existingBooking.map(
+            (b) => b.JadwalMeja.StartTime + ' - ' + b.JadwalMeja.EndTime,
+          ),
         })
       }
 
-      const getDurationInHours = (startTime: string, endTime: string): number => {
+      const getDurationInHours = (
+        startTime: string,
+        endTime: string,
+      ): number => {
         const [startHour, startMinute] = startTime.split(':').map(Number)
         const [endHour, endMinute] = endTime.split(':').map(Number)
-        const start = new Date(); start.setHours(startHour, startMinute, 0, 0)
-        const end = new Date(); end.setHours(endHour, endMinute, 0, 0)
+        const start = new Date()
+        start.setHours(startHour, startMinute, 0, 0)
+        const end = new Date()
+        end.setHours(endHour, endMinute, 0, 0)
         const diffMs = end.getTime() - start.getTime()
         return diffMs / (1000 * 60 * 60)
       }
 
       let totalDurasiJam = 0
-      validJadwals.forEach(jadwal => {
+      validJadwals.forEach((jadwal) => {
         totalDurasiJam += getDurationInHours(jadwal.StartTime, jadwal.EndTime)
       })
+
+      const hargaPerJam = Number(meja?.meja.Harga) || 0
+      const totalBayar = totalDurasiJam * hargaPerJam
 
       const kodeBooking = generateKodeBooking(tanggal)
 
@@ -149,13 +173,12 @@ const BookingController = {
         data: {
           meja: { connect: { id: Number(meja?.meja.id) } },
           Tanggal: tanggalBooking,
-          Harga: meja?.meja.Harga as string,
+          Harga: hargaPerJam.toString(),
           KodeBooking: kodeBooking,
           durasiJam: totalDurasiJam.toString(),
+          TotalBayar: Number(totalBayar),
         },
       })
-
-      const totalBayar = totalDurasiJam * Number(meja?.meja.Harga)
 
       const jamBookingData = jadwalIds.map((jadwalId: number) => ({
         BookingId: booking.id,
@@ -167,10 +190,10 @@ const BookingController = {
 
       return res.status(StatusCodes.CREATED).json(
         ResponseData(StatusCodes.CREATED, 'Booking berhasil dibuat', {
-          booking,
-          totalDurasiJam,
+          ...booking,
+          // totalDurasiJam,
+          // totalBayar,
           jam_booking: jamBookingData,
-          totalBayar,
         }),
       )
     } catch (error: any) {
@@ -233,7 +256,7 @@ const BookingController = {
   getBookingById: async (req: Request, res: Response): Promise<any> => {
     try {
       const bookingId = parseInt(req.params.id as string)
-    
+
       const bookingData = await prisma.booking.findUnique({
         where: { id: bookingId },
         include: {
@@ -241,67 +264,131 @@ const BookingController = {
             select: {
               id: true,
               NamaMeja: true,
-              JamBooking: {
-                select: {
-                  JadwalMeja:true,
-                },
-              },
             },
           },
-          BiodataBooking: true,  
+          JamBooking: {
+            include: {
+              JadwalMeja: true,
+            },
+          },
+          BiodataBooking: true,
         },
       })
-    
+
       if (!bookingData) {
         return res.status(StatusCodes.NOT_FOUND).json({
           message: 'Booking tidak ditemukan',
         })
       }
-    
+
+      // Pisahkan agar bisa atur urutan properti
+      const { BiodataBooking, durasiJam, TotalBayar, ...rest } = bookingData
+
       return res.status(StatusCodes.OK).json(
-        ResponseData(StatusCodes.OK, 'Success', bookingData),
+        ResponseData(StatusCodes.OK, 'Success', {
+          ...rest,
+          BiodataBooking,
+          durasiJam: Number(durasiJam),
+          totalBayar: TotalBayar ?? 0,
+        }),
       )
     } catch (error: any) {
       return serverErrorResponse(res, error)
     }
   },
+
   updateKonfirmasi: async (req: Request, res: Response): Promise<any> => {
     try {
       const bookingId = parseInt(req.params.id as string)
-    
+
       const bookingData = await prisma.booking.findUnique({
         where: { id: bookingId },
         include: {
           BuktiPembayaran: true,
+          BiodataBooking: true,
+          meja: {
+            select: {
+              NamaMeja: true,
+            },
+          },
+          JamBooking: {
+            include: {
+              JadwalMeja: true,
+            },
+          },
         },
       })
-        
+
       if (!bookingData) {
         return res.status(StatusCodes.NOT_FOUND).json({
           message: 'Booking tidak ditemukan',
         })
       }
-    
-      if (bookingData?.BuktiPembayaran.length !== 1)  {
+
+      if (bookingData?.BuktiPembayaran.length !== 1) {
         return res.status(StatusCodes.BAD_REQUEST).json({
           message: 'Bukti pembayaran belum diupload',
         })
       }
-    
+
       const updatedBookingData = await prisma.booking.update({
         where: { id: bookingId },
-        data: { 
-          konfirmasi: bookingData?.konfirmasi === true ? false : true, 
+        data: {
+          konfirmasi: bookingData?.konfirmasi === true ? false : true,
         },
       })
-    
-      return res.status(StatusCodes.OK).json(
-        ResponseData(StatusCodes.OK, 'Success', updatedBookingData),
+
+      await sendEmail(
+        bookingData?.BiodataBooking?.[0]?.Email as string,
+        'Konfirmasi Booking',
+        PesanKonfirmasi(
+          bookingData.BiodataBooking?.[0]?.Nama,
+          `<div style="font-family: Arial, sans-serif; padding: 20px;">
+            <p>
+              Booking Anda telah <strong>${bookingData?.konfirmasi ? '✅ dikonfirmasi' : '❌ ditolak'}</strong>. 
+              Berikut adalah detail booking Anda:
+            </p>
+
+            <table style="margin-top: 20px; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px;">📅 <strong>Tanggal Booking:</strong></td>
+                <td style="padding: 8px;">${formatDateToIndonesian(bookingData?.Tanggal)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px;">🪑 <strong>Meja:</strong></td>
+                <td style="padding: 8px;">${bookingData?.meja?.NamaMeja}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px;">⏰ <strong>Jam:</strong></td>
+                <td style="padding: 8px;">${bookingData?.JamBooking?.[0]?.JadwalMeja?.StartTime} – ${bookingData?.JamBooking?.[0]?.JadwalMeja?.EndTime} WIB</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px;">⏱️ <strong>Durasi:</strong></td>
+                <td style="padding: 8px;">${bookingData?.durasiJam} jam</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px;">💸 <strong>Total Bayar:</strong></td>
+                <td style="padding: 8px;">Rp ${bookingData?.TotalBayar}</td>
+              </tr>
+             <tr>
+                <td style="padding: 8px;">🔖 <strong>Kode Booking:</strong></td>
+                <td style="padding: 8px;">${bookingData?.KodeBooking}</td>
+              </tr>
+            </table>
+
+            <p style="margin-top: 30px;">Silakan datang sesuai jadwal. Terima kasih telah melakukan booking di <strong>Dongans Billiard</strong> 🎱</p>
+
+          </div>
+          `,
+        ),
       )
+
+      return res
+        .status(StatusCodes.OK)
+        .json(ResponseData(StatusCodes.OK, 'Success', updatedBookingData))
     } catch (error: any) {
       return serverErrorResponse(res, error)
     }
   },
 }
 export default BookingController
- 

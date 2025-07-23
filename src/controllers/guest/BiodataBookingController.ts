@@ -45,12 +45,12 @@ const BiodataController = {
   },
   createBiodata : async (req: Request, res: Response): Promise<any> => {
     try {
-      const { Nama, NoTelp, Alamat, BookingId } = req.body
+      const { Nama, NoTelp, Alamat, Email, BookingId } = req.body
 
       // Validasi input
-      if (!Nama || !NoTelp || !Alamat || !BookingId) {
+      if (!Nama || !NoTelp || !Alamat || !Email || !BookingId) {
         return res.status(StatusCodes.BAD_REQUEST).json({
-          message: 'Semua field (Nama, NoTelp, Alamat, BookingId) wajib diisi',
+          message: 'Semua field (Nama, NoTelp, Alamat, Email, BookingId) wajib diisi',
         })
       }
 
@@ -59,6 +59,7 @@ const BiodataController = {
           Nama: Nama,
           NoTelp: NoTelp,
           Alamat: Alamat,
+          Email: Email,
           Booking: {
             connect: { id: BookingId },
           },
