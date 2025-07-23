@@ -345,7 +345,7 @@ const BookingController = {
           bookingData.BiodataBooking?.[0]?.Nama,
           `<div style="font-family: Arial, sans-serif; padding: 20px;">
             <p>
-              Booking Anda telah <strong>${bookingData?.konfirmasi ? '✅ dikonfirmasi' : '❌ ditolak'}</strong>. 
+              Booking Anda telah <strong>${updatedBookingData?.konfirmasi === true ? '✅ dikonfirmasi' : '❌ ditolak'}</strong>. 
               Berikut adalah detail booking Anda:
             </p>
 
@@ -377,6 +377,7 @@ const BookingController = {
             </table>
 
             <p style="margin-top: 30px;">Silakan datang sesuai jadwal. Terima kasih telah melakukan booking di <strong>Dongans Billiard</strong> 🎱</p>
+            <p style="margin-top: 30px;">Jika Jika ada pertanyaan atau kendala terkait booking Anda, silakan hubungi admin melalui WhatsApp di <strong>0812-3456-7890</strong> 📞.</p>
 
           </div>
           `,
