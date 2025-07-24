@@ -194,6 +194,8 @@ const BookingController = {
           // totalDurasiJam,
           // totalBayar,
           jam_booking: jamBookingData,
+          BuktiPembayaran: [],
+
         }),
       )
     } catch (error: any) {
@@ -272,6 +274,7 @@ const BookingController = {
             },
           },
           BiodataBooking: true,
+          BuktiPembayaran: true,
         },
       })
 
@@ -290,6 +293,7 @@ const BookingController = {
           BiodataBooking,
           durasiJam: Number(durasiJam),
           totalBayar: TotalBayar ?? 0,
+          BuktiPembayaran: bookingData?.BuktiPembayaran || [],
         }),
       )
     } catch (error: any) {
