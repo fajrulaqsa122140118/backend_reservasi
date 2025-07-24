@@ -20,7 +20,7 @@ function formatDateToIndonesian(date: Date): string {
     year: 'numeric',
     timeZone: 'Asia/Jakarta',
     hour12: false,
-  }).format(date) 
+  }).format(date)
   return formatted.charAt(0).toUpperCase() + formatted.slice(1)
 }
 
@@ -32,11 +32,9 @@ const BookingController = {
         parseInt(req.query.limit as string),
       )
 
-      const showDeleted = req.query.showDeleted === 'true' // default: false
+      const showDeleted = req.query.showDeleted === 'true'
 
-      const whereCondition = showDeleted
-        ? {} // tampilkan semua (termasuk yang sudah soft-deleted)
-        : { deletedAt: null } // hanya yang aktif
+      const whereCondition = showDeleted ? {} : { deletedAt: null }
 
       const [bookingData, count] = await Promise.all([
         prisma.booking.findMany({
@@ -54,6 +52,7 @@ const BookingController = {
               },
             },
             BiodataBooking: true,
+            BuktiPembayaran: true,
           },
           skip: page.offset,
           take: page.limit,
@@ -62,15 +61,26 @@ const BookingController = {
         prisma.booking.count({ where: whereCondition }),
       ])
 
-      return res
-        .status(StatusCodes.OK)
-        .json(
-          ResponseData(
-            StatusCodes.OK,
-            showDeleted ? 'Including soft-deleted data' : 'Success',
-            page.paginate({ count, rows: bookingData }),
-          ),
-        )
+      // Format ulang setiap item seperti pada getBookingById
+      const formattedData = bookingData.map((booking) => {
+        const { BiodataBooking, durasiJam, TotalBayar, BuktiPembayaran, ...rest } = booking
+
+        return {
+          ...rest,
+          BiodataBooking,
+          durasiJam: Number(durasiJam),
+          totalBayar: TotalBayar ?? 0,
+          BuktiPembayaran: BuktiPembayaran || [],
+        }
+      })
+
+      return res.status(StatusCodes.OK).json(
+        ResponseData(
+          StatusCodes.OK,
+          showDeleted ? 'Including soft-deleted data' : 'Success',
+          page.paginate({ count, rows: formattedData }),
+        ),
+      )
     } catch (error: any) {
       return serverErrorResponse(res, error)
     }
@@ -202,7 +212,6 @@ const BookingController = {
       return serverErrorResponse(res, error)
     }
   },
-
   softdeleteBooking: async (req: Request, res: Response): Promise<any> => {
     try {
       const bookingId = parseInt(req.params.id as string)
@@ -300,7 +309,6 @@ const BookingController = {
       return serverErrorResponse(res, error)
     }
   },
-
   updateKonfirmasi: async (req: Request, res: Response): Promise<any> => {
     try {
       const bookingId = parseInt(req.params.id as string)
