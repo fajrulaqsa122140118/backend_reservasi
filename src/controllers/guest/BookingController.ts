@@ -102,6 +102,14 @@ const BookingController = {
       })
 
       const tanggalBooking = new Date(tanggal)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0) // Reset jam supaya hanya tanggal yang dibandingkan
+
+      if (new Date(tanggal) < today) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: 'Tidak bisa booking di hari yang telah lewat.',
+        })
+      }
 
       const closedData = await prisma.closed.findFirst({
         where: {
