@@ -20,7 +20,7 @@ export const ClosedRouter = (): Router => {
   router.post('/buka', ClosedController.createOpen)
 
   // Delete data tutup atau buka (soft delete atau hard delete, tergantung implementasi)
-  router.delete('/delete:id', ClosedController.deleteClosed)
+  router.delete('/delete/:id', ClosedController.deleteClosed)
 
 
 

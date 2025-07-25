@@ -18,7 +18,7 @@ const MasterMejaController = {
         parseInt(req.query.page as string),
         parseInt(req.query.limit as string),
       )
-      
+
       const whereCondition = {} as any
 
       whereCondition.deletedAt = null
@@ -28,7 +28,7 @@ const MasterMejaController = {
       }
 
       console.log(whereCondition)
-    
+
       const [mejaData, count] = await Promise.all([
         prisma.masterMeja.findMany({
           where: whereCondition,
@@ -41,7 +41,7 @@ const MasterMejaController = {
           where: whereCondition,
         }),
       ])
-    
+
       return res
         .status(StatusCodes.OK)
         .json(
@@ -200,7 +200,7 @@ const MasterMejaController = {
             Harga: reqBody.harga,
             NoMeja: reqBody.noMeja,
             TipeMeja: reqBody.TipeMeja,
-            IsActive : reqBody.isActive !== boolean ? reqBody.isActive : true, // Default to true if not provided
+            IsActive: reqBody.isActive !== boolean ? reqBody.isActive : true, // Default to true if not provided
           },
         })
 
@@ -383,8 +383,6 @@ const MasterMejaController = {
         ...jadwal,
         status: bookedSet.has(jadwal.id) ? 'Booked' : 'Tersedia',
       }))
-
-      console.log(jamBooking)
 
       // Replace jadwal di response
       mejaData.JadwalMeja = jadwalWithStatus

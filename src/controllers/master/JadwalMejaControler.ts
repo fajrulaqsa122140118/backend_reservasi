@@ -1,6 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
 import { Request, Response } from 'express'
-import { Pagination } from '@/utilities/Pagination'
 import prisma from '@/config/database'
 import { ResponseData, serverErrorResponse } from '@/utilities'
 
@@ -8,40 +7,30 @@ import { ResponseData, serverErrorResponse } from '@/utilities'
 const JadwalMejaController = {
   getAllJadwalMeja: async (req: Request, res: Response): Promise<any> => {
     try {
-      const page = new Pagination(
-        parseInt(req.query.page as string),
-        parseInt(req.query.limit as string),
+      // Ambil semua jadwalMeja
+      const jadwalList = await prisma.jadwalMeja.findMany()
+
+      // Ambil semua booking aktif
+      const jamBooking = await prisma.jamBooking.findMany({
+        select: {
+          idJadwalMeja: true,
+        },
+      })
+
+      const bookedSet = new Set(jamBooking.map((jb) => jb.idJadwalMeja))
+
+      // Tambahkan status ke tiap jadwal
+      const jadwalWithStatus = jadwalList.map((jadwal) => ({
+        ...jadwal,
+        status: bookedSet.has(jadwal.id) ? 'Booked' : 'Tersedia',
+      }))
+
+      // Gunakan ResponseData agar import tidak sia-sia
+      return res.status(StatusCodes.OK).json(
+        ResponseData(StatusCodes.OK, 'Semua JadwalMeja berhasil diambil', jadwalWithStatus),
       )
-
-      const whereCondition = {
-        deletedAt: null,
-      }
-
-      const [jadwalMejaData, count] = await Promise.all([
-        prisma.jadwalMeja.findMany({
-          where: whereCondition,
-          include: {
-            meja: true,
-          },
-          skip: page.offset,
-          take: page.limit,
-          orderBy: { id: 'desc' },
-        }),
-        prisma.jadwalMeja.count({
-          where: whereCondition,
-        }),
-      ])
-
-      return res
-        .status(StatusCodes.OK)
-        .json(
-          ResponseData(
-            StatusCodes.OK,
-            'Success',
-            page.paginate({ count, rows: jadwalMejaData }),
-          ),
-        )
     } catch (error: any) {
+      // Gunakan serverErrorResponse agar tidak unused
       return serverErrorResponse(res, error)
     }
   },
@@ -138,7 +127,7 @@ const JadwalMejaController = {
           message: `Meja dengan id ${mejaId} tidak ditemukan`,
         })
       }
-      
+
       // Validasi bentrok (kecuali dirinya sendiri)
       const jadwalBentrok = await prisma.jadwalMeja.findFirst({
         where: {
@@ -221,15 +210,50 @@ const JadwalMejaController = {
         where: { id: jadwalId },
       })
 
+      // Ambil data meja dan semua jadwalnya
+      const mejaData = await prisma.masterMeja.findUnique({
+        where: { id: jadwal?.mejaId },
+        include: {
+          JadwalMeja: true,
+        },
+      })
+
+      if (!mejaData) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          message: `Meja dengan id ${jadwal?.mejaId} tidak ditemukan`,
+        })
+      }
+
+      const jamBooking = await prisma.jamBooking.findMany({
+        where: {
+          idMeja: jadwal?.mejaId,
+        },
+        select: {
+          idJadwalMeja: true,
+        },
+      })
+
+      // Tandai jadwal yang sudah dibooking
+      const bookedSet = new Set(jamBooking.map((jb) => jb.idJadwalMeja))
+
+      // Tambahkan status manual ke setiap JadwalMeja
+      const jadwalWithStatus = mejaData.JadwalMeja.map((jadwal) => ({
+        ...jadwal,
+        status: bookedSet.has(jadwal.id) ? 'Booked' : 'Tersedia',
+      }))
+
       if (!jadwal) {
         return res.status(StatusCodes.NOT_FOUND).json({
           message: `JadwalMeja dengan id ${jadwalId} tidak ditemukan`,
         })
       }
 
+      // Hanya ambil satu jadwal yang sesuai id
+      const singleJadwal = jadwalWithStatus.find((j) => j.id === jadwalId)
+
       return res.status(StatusCodes.OK).json({
         message: 'JadwalMeja ditemukan',
-        data: jadwal,
+        data: singleJadwal,
       })
     } catch (error: any) {
       console.error(error)
